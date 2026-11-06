@@ -2,6 +2,7 @@
 
 ## 2026-11-06 — Neon Singapore
 
+- Build waits up to 30s (plus one retry) for a paused Neon branch to wake before migrating (LDITNW-11).
 - Linked to Neon project `polished-cell-49111239` with `neon init` (`neon.ts`, `@neon/config`, `@neon/env`; `.neon` is git-ignored).
 - All four environments (dev, qa, uat, production) now use the Neon Singapore branches; Vercel functions moved to Singapore (sin1) to sit next to the database; production moved to Singapore too (LDITNW-11).
 
