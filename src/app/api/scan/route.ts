@@ -4,7 +4,7 @@ import { scanDomain } from "@/signals/scan";
 export const runtime = "nodejs"; // DNS lookups need Node, not the edge runtime
 export const maxDuration = 60;
 
-/** POST { "domain": "acme.co.in" } -> Zoho signals with evidence and score. */
+/** POST { "domain": "acme.co.in" } -> need and stack signals with evidence and score. */
 export async function POST(req: Request) {
   let body: { domain?: string };
   try {

@@ -1,5 +1,5 @@
 import { promises as dns } from "node:dns";
-import { matchValues, type SignalMatch } from "./rules";
+import { matchPresent, type SignalMatch } from "./rules";
 
 export interface DnsRecords {
   mx: string[];
@@ -17,8 +17,8 @@ export async function lookupDns(domain: string): Promise<DnsRecords> {
 /** Pure matcher, separated from the network lookup so it can be tested offline. */
 export function matchDns(records: DnsRecords): SignalMatch[] {
   return [
-    ...matchValues("dns-mx", records.mx.map((v) => ({ text: v, where: "MX" }))),
-    ...matchValues("dns-txt", records.txt.map((v) => ({ text: v, where: "TXT" }))),
+    ...matchPresent("dns-mx", records.mx.map((v) => ({ text: v, where: "MX" }))),
+    ...matchPresent("dns-txt", records.txt.map((v) => ({ text: v, where: "TXT" }))),
   ];
 }
 

@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 export const metadata = {
   title: "LeadItNow",
-  description: "Find businesses that run on Zoho and work them from first contact to signed MSA.",
+  description: "Find businesses that need software or IT services and work them from first contact to signed MSA.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

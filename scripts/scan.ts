@@ -10,8 +10,9 @@ async function main() {
   for (const d of domains) {
     try {
       const r = await scanDomain(d);
-      console.log(`\n${r.domain}: ${r.zoho.label} (${r.zoho.score}/100) apps=[${r.zoho.apps.join(", ")}]`);
-      for (const s of r.signals) console.log(`  +${s.weight} ${s.label}${s.verified ? "" : " (to confirm)"}\n      ${s.evidence}`);
+      console.log(`\n${r.domain}: ${r.need.label} need (${r.need.score}/100) lead with=[${r.need.serviceHints.join(", ")}]`);
+      console.log(`  stack (context only): ${r.need.stack.join(", ") || "not detected"}`);
+      for (const s of r.signals.filter((x) => x.category === "NEED")) console.log(`  +${s.weight} ${s.label}\n      ${s.evidence}`);
       console.log(`  pages checked: ${r.pagesScanned.length}`);
     } catch (e) {
       console.log(`\n${d}: error - ${(e as Error).message}`);

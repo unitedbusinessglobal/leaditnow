@@ -1,39 +1,56 @@
 import { describe, expect, it } from "vitest";
 import { matchDns } from "../src/signals/dns";
-import { matchPages, parseRobots, isAllowed, pickLinks } from "../src/signals/web";
-import { zohoScore, fitScore, priority } from "../src/signals/score";
+import { matchPages, parseRobots, isAllowed, pickLinks, copyrightYear } from "../src/signals/web";
+import { needScore, fitScore, priority } from "../src/signals/score";
 import { manualSignal } from "../src/signals/rules";
 import { normaliseDomain } from "../src/signals/scan";
 
-describe("DNS signals", () => {
-  it("detects Zoho Mail MX (India and global) and SPF include", () => {
-    const m = matchDns({
-      mx: ["mx.zoho.in", "mx2.zoho.in", "mx3.zoho.in"],
-      txt: ["v=spf1 include:zoho.in ~all", "google-site-verification=abc"],
-    });
-    expect(m.map((x) => x.ruleId).sort()).toEqual(["zoho-mail-mx", "zoho-spf"]);
-    expect(m.find((x) => x.ruleId === "zoho-mail-mx")!.evidence).toContain("mx.zoho.in");
-    expect(matchDns({ mx: ["mx.zoho.com."], txt: [] })[0].ruleId).toBe("zoho-mail-mx");
-  });
+const NOW = new Date("2026-11-05T00:00:00Z");
+const ids = (m: { ruleId: string }[]) => m.map((x) => x.ruleId).sort();
+const MODERN_HOME = `<html><head><meta name="viewport" content="width=device-width"></head>
+<body><a href="/login">Client portal</a><footer>© 2026 Acme</footer></body></html>`;
 
-  it("ignores Google Workspace domains", () => {
-    expect(matchDns({ mx: ["aspmx.l.google.com"], txt: ["v=spf1 include:_spf.google.com ~all"] })).toEqual([]);
+describe("DNS stack signals", () => {
+  it("records the email provider as stack context only", () => {
+    const m = matchDns({ mx: ["aspmx.l.google.com"], txt: [] });
+    expect(ids(m)).toEqual(["mx-google"]);
+    expect(m[0].category).toBe("STACK");
+    expect(ids(matchDns({ mx: ["acme-in.mail.protection.outlook.com"], txt: [] }))).toEqual(["mx-microsoft"]);
+    expect(ids(matchDns({ mx: ["mx.zoho.in", "mx2.zoho.in"], txt: [] }))).toEqual(["mx-zoho"]);
   });
 });
 
-describe("Website signals", () => {
-  it("finds a Zoho Form embed and a Creator app, once each", () => {
-    const m = matchPages([
-      { url: "https://a.in/", html: `<iframe src="https://forms.zohopublic.com/acme/form/Enquiry/formperma/x"></iframe>` },
-      { url: "https://a.in/contact", html: `<iframe src="https://forms.zohopublic.in/acme/form/Other"></iframe>` },
-      { url: "https://a.in/portal", html: `<a href="https://creatorapp.zohopublic.in/acme/orders">Orders</a>` },
-    ]);
-    expect(m.map((x) => x.ruleId).sort()).toEqual(["zoho-creator", "zoho-forms"]);
-    expect(m.find((x) => x.ruleId === "zoho-forms")!.evidence.startsWith("https://a.in/:")).toBe(true);
+describe("Website need signals", () => {
+  it("finds nothing to flag on a modern site with ordering", () => {
+    const m = matchPages(
+      [{ url: "https://acme.in/", html: MODERN_HOME + `<a href="/products">Our products</a><button>Add to cart</button>` }],
+      { now: NOW },
+    );
+    expect(m.filter((x) => x.category === "NEED")).toEqual([]);
   });
 
-  it("does not match plain mentions of other tools", () => {
-    expect(matchPages([{ url: "https://b.in/", html: "<p>We use Tally and Google Forms</p>" }])).toEqual([]);
+  it("flags an old, non-mobile site that sells via IndiaMART with a Gmail contact", () => {
+    const home = `<html><body><h2>Our products</h2><p>Mail us: acmepumps@gmail.com</p>
+      <a href="https://www.indiamart.com/acme-pumps/">Buy on IndiaMART</a><p>Copyright 2019 Acme Pumps</p></body></html>`;
+    const m = matchPages([{ url: "http://acmepumps.in/", html: home }], { https: false, now: NOW });
+    expect(ids(m.filter((x) => x.category === "NEED"))).toEqual(
+      ["basic-contact", "free-webmail", "marketplace-only", "no-https", "no-mobile", "outdated-site", "sells-no-cart"].sort(),
+    );
+    expect(m.find((x) => x.ruleId === "outdated-site")!.evidence).toContain("2019");
+  });
+
+  it("records website platform as stack, not need", () => {
+    const m = matchPages(
+      [{ url: "https://b.in/", html: MODERN_HOME + `<link href="/wp-content/themes/x.css"><script src="https://checkout.razorpay.com/v1/checkout.js"></script>` }],
+      { now: NOW },
+    );
+    expect(ids(m)).toEqual(["pay-razorpay", "site-wordpress"]);
+  });
+
+  it("reads the latest copyright year", () => {
+    expect(copyrightYear("<p>Copyright 2017-2021 Acme</p>")).toBe(2021);
+    expect(copyrightYear("<p>&copy; 2024</p>")).toBe(2024);
+    expect(copyrightYear("<p>no year</p>")).toBeNull();
   });
 });
 
@@ -58,39 +75,34 @@ describe("robots and links", () => {
 });
 
 describe("Scoring", () => {
-  it("labels MX + SPF + Forms as Confirmed with score 60", () => {
+  it("scores need signals, caps stack at 5 and lists service hints", () => {
     const signals = [
-      ...matchDns({ mx: ["mx.zoho.in"], txt: ["v=spf1 include:zoho.in ~all"] }),
-      ...matchPages([{ url: "https://a.in/", html: "forms.zohopublic.com" }]),
+      ...matchDns({ mx: ["aspmx.l.google.com"], txt: [] }),
+      ...matchPages(
+        [{ url: "https://c.in/", html: MODERN_HOME + `<h2>Our products</h2><link href="/wp-content/x.css"><div class="woocommerce-x"></div><script src="https://cdn.shopify.com/s.js"></script>` }],
+        { now: NOW },
+      ),
+      manualSignal("job-post-it", "Naukri: ERP executive, Oct 2026"),
     ];
-    const z = zohoScore(signals);
-    expect(z.score).toBe(60);
-    expect(z.label).toBe("Confirmed");
-    expect(z.apps).toEqual(["Forms", "Mail"]);
+    const n = needScore(signals);
+    // job post 20, stack 2+1+1+1=5 capped at 5; ordering present (woocommerce/shopify) so no sells-no-cart
+    expect(n.score).toBe(25);
+    expect(n.label).toBe("Medium");
+    expect(n.stack).toEqual(["Google Workspace", "Shopify", "WooCommerce", "WordPress"]);
+    expect(n.serviceHints).toEqual(["ERP/CRM"]);
+    expect(n.strongIntent).toBe(true);
   });
 
-  it("does not call unverified-only signals Confirmed", () => {
-    const z = zohoScore(matchPages([{ url: "u", html: "creatorapp.zohopublic.in books.zoho.in" }]));
-    expect(z.score).toBe(40);
-    expect(z.label).toBe("Likely");
-    expect(z.customNeed).toBe(true);
-  });
-
-  it("caps at 100 and flags Zoho One at 4+ apps", () => {
-    const z = zohoScore([
-      ...matchDns({ mx: ["mx.zoho.in"], txt: ["include:zoho.in"] }),
-      ...matchPages([{ url: "u", html: "forms.zohopublic.com creatorapp.zohopublic.in books.zoho.in salesiq.zoho.in" }]),
-      manualSignal("referral-zoho", "CA referral"),
-    ]);
-    expect(z.score).toBe(100);
-    expect(z.likelyZohoOne).toBe(true);
+  it("gives None when only stack signals are found", () => {
+    expect(needScore(matchDns({ mx: ["aspmx.l.google.com"], txt: [] })).label).toBe("None");
   });
 
   it("computes fit and priority", () => {
-    const fit = fitScore({ city: "Chennai", staffSize: 60, industry: "Manufacturing", decisionMakerFound: true });
+    const fit = fitScore({ city: "Chennai", staffSize: 300, industry: "Retail", decisionMakerFound: true });
     expect(fit).toBe(90);
-    const z = zohoScore(matchDns({ mx: ["mx.zoho.in"], txt: ["include:zoho.in"] }));
-    expect(priority(z, fit)).toBe(41); // 45 * 90 / 100 = 40.5 -> 41
+    const n = needScore([manualSignal("referral", "CA referral"), manualSignal("growth-news", "New plant")]);
+    expect(n.score).toBe(40);
+    expect(priority(n, fit)).toBe(36 + 15);
   });
 });
 

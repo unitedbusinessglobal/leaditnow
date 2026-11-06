@@ -1,34 +1,39 @@
 import type { SignalMatch } from "./rules";
 
-export type ZohoLabel = "Confirmed" | "Likely" | "Possible" | "None";
+export type NeedLabel = "High" | "Medium" | "Low" | "None";
 
-export interface ZohoScore {
+export interface NeedScore {
   score: number; // 0-100
-  label: ZohoLabel;
-  /** Distinct Zoho apps detected; 4 or more suggests Zoho One. */
-  apps: string[];
-  likelyZohoOne: boolean;
-  customNeed: boolean;
+  label: NeedLabel;
+  /** Technology already in use (context for the BA, never used in outreach). */
+  stack: string[];
+  /** Likely service lines, strongest first. */
+  serviceHints: string[];
+  /** Referral or job-post signal present: boosts priority. */
+  strongIntent: boolean;
 }
 
-/** Zoho score = sum of weights of distinct rules matched, capped at 100. */
-export function zohoScore(matches: SignalMatch[]): ZohoScore {
+const STACK_CAP = 5;
+
+/** Need score = distinct NEED weights + at most 5 for STACK signals, capped at 100. */
+export function needScore(matches: SignalMatch[]): NeedScore {
   const byRule = new Map<string, SignalMatch>();
   for (const m of matches) if (!byRule.has(m.ruleId)) byRule.set(m.ruleId, m);
   const distinct = [...byRule.values()];
+  const need = distinct.filter((m) => m.category === "NEED").sort((a, b) => b.weight - a.weight);
+  const stack = distinct.filter((m) => m.category === "STACK");
 
-  const score = Math.min(100, distinct.reduce((sum, m) => sum + m.weight, 0));
-  const hasVerified = distinct.some((m) => m.verified);
-  const label: ZohoLabel =
-    score === 0 ? "None" : score >= 40 && hasVerified ? "Confirmed" : score >= 20 ? "Likely" : "Possible";
+  const needPoints = need.reduce((s, m) => s + m.weight, 0);
+  const stackPoints = Math.min(STACK_CAP, stack.reduce((s, m) => s + m.weight, 0));
+  const score = Math.min(100, needPoints + stackPoints);
+  const label: NeedLabel = needPoints === 0 ? "None" : score >= 40 ? "High" : score >= 20 ? "Medium" : "Low";
 
-  const apps = [...new Set(distinct.map((m) => m.zohoApp).filter((a) => a !== "Stated"))].sort();
   return {
     score,
     label,
-    apps,
-    likelyZohoOne: apps.length >= 4,
-    customNeed: distinct.some((m) => m.customNeed),
+    stack: stack.map((m) => m.label.replace(/^[^:]+:\s*/, "")).sort(),
+    serviceHints: [...new Set(need.map((m) => m.serviceLine).filter((s) => s && s !== "Stated"))],
+    strongIntent: need.some((m) => m.ruleId === "referral" || m.ruleId === "job-post-it"),
   };
 }
 
@@ -42,9 +47,11 @@ export interface FitInput {
 
 const TARGET_CITIES = ["chennai", "coimbatore", "tirupur", "tiruppur", "madurai"];
 const TARGET_INDUSTRIES = [
-  "manufacturing",
-  "distribution",
+  "manufactur",
+  "distribut",
   "trading",
+  "retail",
+  "commerce",
   "agri",
   "clinic",
   "diagnostic",
@@ -58,14 +65,14 @@ const TARGET_INDUSTRIES = [
 export function fitScore(f: FitInput): number {
   let s = 0;
   if (f.city && TARGET_CITIES.some((c) => f.city!.toLowerCase().includes(c))) s += 25;
-  if (f.staffSize != null && f.staffSize >= 10 && f.staffSize <= 200) s += 25;
+  if (f.staffSize != null && f.staffSize >= 10 && f.staffSize <= 500) s += 25;
   if (f.industry && TARGET_INDUSTRIES.some((i) => f.industry!.toLowerCase().includes(i))) s += 25;
   if (f.decisionMakerFound) s += 15;
   if (f.referral) s += 10;
   return s;
 }
 
-/** Priority = Zoho score x fit score / 100, plus 15 when the custom-need flag is set. */
-export function priority(zoho: ZohoScore, fit: number): number {
-  return Math.round((zoho.score * fit) / 100) + (zoho.customNeed ? 15 : 0);
+/** Priority = need x fit / 100, plus 15 when a referral or job post shows strong intent. */
+export function priority(need: NeedScore, fit: number): number {
+  return Math.round((need.score * fit) / 100) + (need.strongIntent ? 15 : 0);
 }

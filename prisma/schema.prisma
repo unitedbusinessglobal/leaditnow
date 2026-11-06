@@ -12,7 +12,7 @@ datasource db {
 
 enum Role {
   FOUNDER
-  HEAD
+  DIRECTOR
   BA
   SALES
   INTERN
@@ -51,6 +51,11 @@ enum DocumentStatus {
   SENT
   SIGNED
   DECLINED
+}
+
+enum SignalCategory {
+  NEED
+  STACK
 }
 
 enum ScanStatus {
@@ -93,11 +98,12 @@ model Account {
   industry   String?
   city       String?
   staffSize  Int?
-  zohoScore  Int             @default(0)
-  zohoLabel  String          @default("None")
-  fitScore   Int             @default(0)
-  priority   Int             @default(0)
-  customNeed Boolean         @default(false)
+  needScore   Int             @default(0)
+  needLabel   String          @default("None")
+  stack       String[]
+  serviceHint String?
+  fitScore    Int             @default(0)
+  priority    Int             @default(0)
   ownerId    String?
   owner      User?           @relation("AccountOwner", fields: [ownerId], references: [id])
   createdAt  DateTime        @default(now())
@@ -134,11 +140,11 @@ model Signal {
   orgId     String
   accountId String
   account   Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  ruleId    String
-  zohoApp   String
-  weight    Int
-  verified  Boolean
-  evidence  String // DNS record or page URL plus matched text
+  ruleId      String
+  category    SignalCategory
+  serviceLine String?
+  weight      Int
+  evidence    String // DNS record or page URL plus matched text
   foundAt   DateTime @default(now())
   scanRunId String?
 
@@ -164,7 +170,7 @@ model ResearchBrief {
   account      Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
   summary      String
   processes    String
-  painPoints   String
+  needs        String
   sources      String[]
   model        String
   reviewedById String?
@@ -177,7 +183,8 @@ model Deal {
   accountId  String
   account    Account    @relation(fields: [accountId], references: [id])
   title      String
-  offer      String // custom module, replacement, vertical app, product
+  serviceLine     String // ERP, CRM, SaaS, e-commerce, custom app, ITES, product
+  indiaOriginated Boolean @default(false) // for the 60/40 revenue share under the intercompany agreement
   stage      DealStage  @default(TARGET)
   valueInr   Int?
   nextStep   String?

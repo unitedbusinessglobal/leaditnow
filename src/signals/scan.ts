@@ -1,6 +1,6 @@
 import { scanDns } from "./dns";
 import { scanWebsite } from "./web";
-import { zohoScore, type ZohoScore } from "./score";
+import { needScore, type NeedScore } from "./score";
 import type { SignalMatch } from "./rules";
 
 export interface ScanResult {
@@ -8,7 +8,7 @@ export interface ScanResult {
   scannedAt: string;
   pagesScanned: string[];
   signals: SignalMatch[];
-  zoho: ZohoScore;
+  need: NeedScore;
 }
 
 /** Normalise "https://www.Example.co.in/contact" to "example.co.in". */
@@ -30,6 +30,6 @@ export async function scanDomain(input: string): Promise<ScanResult> {
     scannedAt: new Date().toISOString(),
     pagesScanned: web.pagesScanned,
     signals,
-    zoho: zohoScore(signals),
+    need: needScore(signals),
   };
 }

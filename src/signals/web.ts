@@ -1,4 +1,4 @@
-import { matchValues, type SignalMatch } from "./rules";
+import { matchAbsent, matchPresent, rule, toMatch, type SignalMatch } from "./rules";
 
 export const USER_AGENT = "LeadItNowBot/0.1 (+https://ainformatiq.com; public-page check)";
 const MAX_EXTRA_PAGES = 10;
@@ -61,19 +61,72 @@ export function pickLinks(html: string, base: URL, limit = MAX_EXTRA_PAGES): str
   return [...found].sort((a, b) => score(a) - score(b)).slice(0, limit);
 }
 
-/** Pure matcher over fetched pages, testable offline. */
-export function matchPages(pages: { url: string; html: string }[]): SignalMatch[] {
-  return matchValues("html", pages.map((p) => ({ text: p.html, where: p.url })));
+const PRODUCT_WORDS = /(our products|product range|products?\s*<|catalogue|catalog|price list|order now|buy now|enquire now|request a quote|get a quote)/i;
+const ORDERING = /(add to cart|add-to-cart|\bcart\b|checkout|woocommerce|cdn\.shopify\.com|checkout\.razorpay\.com|instamojo|paytm|buy online)/i;
+
+/** Latest copyright year on a page, if any ("© 2019", "Copyright 2017-2021" -> 2021). */
+export function copyrightYear(html: string): number | null {
+  const years: number[] = [];
+  for (const m of html.matchAll(/(?:©|&copy;|copyright)[^<]{0,40}/gi)) {
+    for (const y of m[0].matchAll(/\b(19|20)\d{2}\b/g)) years.push(Number(y[0]));
+  }
+  return years.length ? Math.max(...years) : null;
 }
 
-/** Fetch the home page plus up to 10 same-site pages and match Zoho rules. Public pages only. */
+/**
+ * Pure analysis of fetched pages, testable offline.
+ * pages[0] must be the home page. `https` says whether the site answered over HTTPS.
+ */
+export function matchPages(
+  pages: { url: string; html: string }[],
+  opts: { https?: boolean; now?: Date } = {},
+): SignalMatch[] {
+  if (!pages.length) return [];
+  const { https = true, now = new Date() } = opts;
+  const home = pages[0];
+  const all = pages.map((p) => p.html).join("\n");
+  const out: SignalMatch[] = [
+    ...matchPresent("html", pages.map((p) => ({ text: p.html, where: p.url }))),
+    ...matchAbsent({ text: home.html, where: home.url }),
+  ];
+
+  if (!https) out.push(toMatch(rule("no-https"), `${home.url}: served over plain HTTP`));
+
+  const year = copyrightYear(home.html);
+  if (year !== null && year <= now.getUTCFullYear() - 3) {
+    out.push(toMatch(rule("outdated-site"), `${home.url}: copyright ${year}`));
+  }
+
+  const sellsProducts = PRODUCT_WORDS.test(all);
+  const hasOrdering = ORDERING.test(all);
+  if (sellsProducts && !hasOrdering) {
+    const page = pages.find((p) => PRODUCT_WORDS.test(p.html)) ?? home;
+    out.push(toMatch(rule("sells-no-cart"), `${page.url}: product pages but no cart or checkout`));
+  }
+  const market = new RegExp(rule("marketplace-only").pattern, "i").exec(all);
+  if (market && !hasOrdering) {
+    out.push(toMatch(rule("marketplace-only"), `links to ${market[0]} with no own ordering`));
+  }
+  return out;
+}
+
+/** Fetch the home page plus up to 10 same-site pages and match the rules. Public pages only. */
 export async function scanWebsite(domain: string): Promise<{ matches: SignalMatch[]; pagesScanned: string[] }> {
-  const home = new URL(`https://${domain}/`);
+  let home = new URL(`https://${domain}/`);
   const robots = await fetchText(new URL("/robots.txt", home).href);
   const disallow = robots ? parseRobots(robots) : [];
 
   const pages: { url: string; html: string }[] = [];
-  const homeHtml = isAllowed("/", disallow) ? await fetchText(home.href) : null;
+  let https = true;
+  let homeHtml = isAllowed("/", disallow) ? await fetchText(home.href) : null;
+  if (!homeHtml && isAllowed("/", disallow)) {
+    const plain = new URL(`http://${domain}/`);
+    homeHtml = await fetchText(plain.href);
+    if (homeHtml) {
+      https = false;
+      home = plain;
+    }
+  }
   if (homeHtml) {
     pages.push({ url: home.href, html: homeHtml });
     for (const link of pickLinks(homeHtml, home)) {
@@ -83,5 +136,5 @@ export async function scanWebsite(domain: string): Promise<{ matches: SignalMatc
       if (html) pages.push({ url: link, html });
     }
   }
-  return { matches: matchPages(pages), pagesScanned: pages.map((p) => p.url) };
+  return { matches: matchPages(pages, { https }), pagesScanned: pages.map((p) => p.url) };
 }

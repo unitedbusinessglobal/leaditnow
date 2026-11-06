@@ -1,73 +1,71 @@
 import rulesFile from "./signals.json";
 
 export type SignalSource = "dns-mx" | "dns-txt" | "html" | "manual";
+export type SignalCategory = "NEED" | "STACK";
+export type RuleKind = "present" | "absent" | "check" | "manual";
 
 export interface SignalRule {
   id: string;
+  category: SignalCategory;
+  kind: RuleKind;
   source: SignalSource;
   pattern: string;
-  zohoApp: string;
+  serviceLine: string;
   weight: number;
-  verified: boolean;
-  customNeed?: boolean;
   label: string;
 }
 
-/** A rule that matched, with the evidence that proves it. */
+/** A rule that fired, with the evidence behind it. */
 export interface SignalMatch {
   ruleId: string;
-  zohoApp: string;
+  category: SignalCategory;
+  serviceLine: string;
   weight: number;
-  verified: boolean;
-  customNeed: boolean;
   label: string;
-  /** The DNS record or page URL (plus the matched text) that triggered the rule. */
+  /** The DNS record or page URL (plus the matched text or reason). */
   evidence: string;
 }
 
 export const RULES: SignalRule[] = (rulesFile.rules as SignalRule[]).map((r) => ({ ...r }));
 
-export function rulesFor(source: SignalSource): SignalRule[] {
-  return RULES.filter((r) => r.source === source && r.pattern !== "");
+export function rule(id: string): SignalRule {
+  const r = RULES.find((x) => x.id === id);
+  if (!r) throw new Error(`Unknown rule ${id}`);
+  return r;
 }
 
-function toMatch(rule: SignalRule, evidence: string): SignalMatch {
-  return {
-    ruleId: rule.id,
-    zohoApp: rule.zohoApp,
-    weight: rule.weight,
-    verified: rule.verified,
-    customNeed: Boolean(rule.customNeed),
-    label: rule.label,
-    evidence,
-  };
+export function toMatch(r: SignalRule, evidence: string): SignalMatch {
+  return { ruleId: r.id, category: r.category, serviceLine: r.serviceLine, weight: r.weight, label: r.label, evidence };
 }
 
 /**
- * Match a list of text values (DNS records or page HTML) against the rules for one source.
- * Each rule matches at most once per call; the first matching value is kept as evidence.
+ * "present" rules for one source: each rule fires at most once, the first matching value is the evidence.
  */
-export function matchValues(
-  source: SignalSource,
-  values: { text: string; where: string }[],
-): SignalMatch[] {
-  const matches: SignalMatch[] = [];
-  for (const rule of rulesFor(source)) {
-    const re = new RegExp(rule.pattern, "i");
+export function matchPresent(source: SignalSource, values: { text: string; where: string }[]): SignalMatch[] {
+  const out: SignalMatch[] = [];
+  for (const r of RULES.filter((x) => x.source === source && x.kind === "present")) {
+    const re = new RegExp(r.pattern, "i");
     for (const v of values) {
       const m = re.exec(v.text);
       if (m) {
-        matches.push(toMatch(rule, `${v.where}: ${m[0]}`));
+        out.push(toMatch(r, `${v.where}: ${m[0]}`));
         break;
       }
     }
   }
-  return matches;
+  return out;
 }
 
-/** A signal the team enters by hand, e.g. a job post or a referral. */
-export function manualSignal(ruleId: "job-post-zoho" | "referral-zoho", evidence: string): SignalMatch {
-  const rule = RULES.find((r) => r.id === ruleId);
-  if (!rule) throw new Error(`Unknown manual rule ${ruleId}`);
-  return toMatch(rule, evidence);
+/** "absent" rules: fire when the pattern is missing from the given page (normally the home page). */
+export function matchAbsent(page: { text: string; where: string }): SignalMatch[] {
+  return RULES.filter((x) => x.source === "html" && x.kind === "absent")
+    .filter((r) => !new RegExp(r.pattern, "i").test(page.text))
+    .map((r) => toMatch(r, `${page.where}: not found`));
+}
+
+/** A signal the team enters by hand: a referral, job post or growth news. */
+export function manualSignal(ruleId: "referral" | "job-post-it" | "growth-news", evidence: string): SignalMatch {
+  const r = rule(ruleId);
+  if (r.kind !== "manual") throw new Error(`${ruleId} is not a manual rule`);
+  return toMatch(r, evidence);
 }

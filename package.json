@@ -1,8 +1,8 @@
 {
   "name": "leaditnow",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
-  "description": "LeadItNow - find Indian SMBs that run on Zoho, prove it with evidence, and work them from first contact to signed MSA.",
+  "description": "LeadItNow - find Indian businesses that need software or IT services, show the evidence, and work them from first contact to signed MSA.",
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",

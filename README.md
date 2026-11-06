@@ -1,18 +1,20 @@
 # LeadItNow
 
-LeadItNow finds Indian businesses that already run on Zoho, proves it with evidence, and helps the AInformatIQ Chennai team work them from first contact to a signed MSA.
+LeadItNow finds Indian businesses that are likely to need software or IT services (ERP, CRM, SaaS, e-commerce, custom apps, AI automation, ITES), shows the evidence, and helps the AInformatIQ Chennai team work them from first contact to a signed MSA.
 
-Product spec: LeadItNow product spec (Claude doc) · Jira: LeadItNow epics · Part of the AInformatIQ product family (TestItNow, BreakItNow, BuilditNow).
+Product spec: LeadItNow product spec (Claude doc) · Part of the AInformatIQ product family (TestItNow, BreakItNow, BuilditNow).
 
-## What works today (v0.1)
+## What works today (v0.2)
 
-- **Zoho-signal scanner** (`src/signals/`): checks a domain's DNS (Zoho Mail MX, SPF include) and its public website (home page plus up to 10 same-site pages, robots.txt honoured, 1 request a second) for Zoho Forms, Creator, Books, SalesIQ, Bookings, Desk, Recruit, Sites and PageSense traces.
-- **Scoring**: Zoho score (0-100, Confirmed / Likely / Possible), Zoho apps found, Zoho One hint, custom-need flag, fit score and priority.
+- **Need-signal scanner** (`src/signals/`): checks a domain's public website (home page plus up to 10 same-site pages, robots.txt honoured, 1 request a second) and DNS for:
+  - **Need signals** (scored): sells products with no online ordering, sells only via marketplaces, not mobile-friendly, no HTTPS, out-of-date copyright, free webmail contact, contact by basic form only; plus manual signals for referrals, IT job posts and growth news.
+  - **Stack signals** (context, max 5 points): email provider, website platform, store and payment tools, visible business apps.
+- **Scoring**: need score (0-100, High / Medium / Low / None), service-line hints, current stack, fit score and priority.
 - **Web page** at `/` and API `POST /api/scan` `{ "domain": "acme.co.in" }`.
 - **CLI**: `npm run scan -- acme.co.in other.in`.
-- **Data model** in `prisma/schema.prisma` for the MVP (accounts, contacts, signals, deals, activities, tasks, documents, audit log).
+- **Data model** in `prisma/schema.prisma` for the MVP, including `Deal.indiaOriginated` for the intercompany revenue share.
 
-Rules and weights live in `src/signals/signals.json`, so they can change without code changes. Rules marked `"verified": false` must be confirmed against known Zoho users before they count at full weight.
+Rules and weights live in `src/signals/signals.json`, so they can change without code changes. Test each rule on 10 known businesses before relying on it.
 
 ## Run locally
 
@@ -29,4 +31,4 @@ Code moves DEV -> QA -> UAT -> PROD on branches `dev`, `qa`, `uat`, `main`, each
 
 ## Guardrails
 
-Public DNS records and public pages only: no logins, no scraping behind authentication, no Zoho API calls on prospects' data. Describe Zoho factually; no Zoho logos.
+Public DNS records and public pages only: no logins, no scraping behind authentication, no vendor API calls on prospects' data. The detected stack is internal context: outreach never names or criticises another vendor.

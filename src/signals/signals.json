@@ -1,124 +1,29 @@
 {
-  "version": 1,
+  "version": 2,
+  "notes": "category NEED adds to the need score; STACK is context (capped at 5 points in total). kind: present = pattern found; absent = pattern missing from the home page; check = computed in code; manual = entered by the team.",
   "rules": [
-    {
-      "id": "zoho-mail-mx",
-      "source": "dns-mx",
-      "pattern": "(^|\\.)mx\\d*\\.zoho\\.(in|com|eu|com\\.au)\\.?$",
-      "zohoApp": "Mail",
-      "weight": 30,
-      "verified": true,
-      "label": "Email domain's MX records point to Zoho Mail"
-    },
-    {
-      "id": "zoho-spf",
-      "source": "dns-txt",
-      "pattern": "include:zoho\\.(in|com|eu|com\\.au)",
-      "zohoApp": "Mail",
-      "weight": 15,
-      "verified": true,
-      "label": "SPF record includes Zoho"
-    },
-    {
-      "id": "zoho-forms",
-      "source": "html",
-      "pattern": "forms\\.zohopublic\\.(com|in|eu)",
-      "zohoApp": "Forms",
-      "weight": 15,
-      "verified": true,
-      "label": "Website embeds a Zoho Form"
-    },
-    {
-      "id": "zoho-creator",
-      "source": "html",
-      "pattern": "(creatorapp\\.zohopublic\\.|creator\\.zoho\\.)",
-      "zohoApp": "Creator",
-      "weight": 20,
-      "verified": false,
-      "customNeed": true,
-      "label": "Website links to or embeds a Zoho Creator app"
-    },
-    {
-      "id": "zoho-books",
-      "source": "html",
-      "pattern": "books\\.zoho\\.(com|in|eu)",
-      "zohoApp": "Books",
-      "weight": 20,
-      "verified": false,
-      "label": "Zoho Books invoice or payment link"
-    },
-    {
-      "id": "zoho-salesiq",
-      "source": "html",
-      "pattern": "salesiq\\.zoho(public)?\\.(com|in|eu)",
-      "zohoApp": "SalesIQ",
-      "weight": 10,
-      "verified": false,
-      "label": "Zoho SalesIQ chat widget on the website"
-    },
-    {
-      "id": "zoho-bookings",
-      "source": "html",
-      "pattern": "(bookings\\.zoho\\.|zohobookings\\.)",
-      "zohoApp": "Bookings",
-      "weight": 10,
-      "verified": false,
-      "label": "Zoho Bookings page linked"
-    },
-    {
-      "id": "zoho-desk",
-      "source": "html",
-      "pattern": "desk\\.zoho\\.(com|in|eu)",
-      "zohoApp": "Desk",
-      "weight": 10,
-      "verified": false,
-      "label": "Zoho Desk help centre linked"
-    },
-    {
-      "id": "zoho-recruit",
-      "source": "html",
-      "pattern": "zohorecruit\\.(com|in|eu)",
-      "zohoApp": "Recruit",
-      "weight": 8,
-      "verified": false,
-      "label": "Careers page on Zoho Recruit"
-    },
-    {
-      "id": "zoho-sites",
-      "source": "html",
-      "pattern": "(zohositescontent|zsite\\.zoho)",
-      "zohoApp": "Sites",
-      "weight": 8,
-      "verified": false,
-      "label": "Website appears to be built on Zoho Sites"
-    },
-    {
-      "id": "zoho-pagesense",
-      "source": "html",
-      "pattern": "cdn\\.pagesense\\.io",
-      "zohoApp": "PageSense",
-      "weight": 5,
-      "verified": false,
-      "label": "Zoho PageSense script on the website"
-    },
-    {
-      "id": "job-post-zoho",
-      "source": "manual",
-      "pattern": "",
-      "zohoApp": "CRM",
-      "weight": 15,
-      "verified": false,
-      "customNeed": true,
-      "label": "Job post asks for Zoho skills"
-    },
-    {
-      "id": "referral-zoho",
-      "source": "manual",
-      "pattern": "",
-      "zohoApp": "Stated",
-      "weight": 25,
-      "verified": true,
-      "label": "Referral says they use Zoho"
-    }
+    { "id": "referral", "category": "NEED", "kind": "manual", "source": "manual", "pattern": "", "serviceLine": "Stated", "weight": 25, "label": "Referral says they need software or services" },
+    { "id": "job-post-it", "category": "NEED", "kind": "manual", "source": "manual", "pattern": "", "serviceLine": "ERP/CRM", "weight": 20, "label": "Hiring for ERP, CRM, e-commerce or IT roles" },
+    { "id": "growth-news", "category": "NEED", "kind": "manual", "source": "manual", "pattern": "", "serviceLine": "ERP", "weight": 15, "label": "Growth news: new plant, branch, export orders or funding" },
+
+    { "id": "sells-no-cart", "category": "NEED", "kind": "check", "source": "html", "pattern": "", "serviceLine": "E-commerce", "weight": 15, "label": "Sells products but has no online ordering" },
+    { "id": "marketplace-only", "category": "NEED", "kind": "check", "source": "html", "pattern": "(indiamart\\.com|tradeindia\\.com|exportersindia\\.com)", "serviceLine": "E-commerce", "weight": 10, "label": "Sells only through marketplaces" },
+    { "id": "no-mobile", "category": "NEED", "kind": "absent", "source": "html", "pattern": "<meta[^>]+name=[\"']viewport[\"']", "serviceLine": "Website", "weight": 10, "label": "Website is not mobile-friendly" },
+    { "id": "no-https", "category": "NEED", "kind": "check", "source": "html", "pattern": "", "serviceLine": "Website", "weight": 10, "label": "Website is not secure (no HTTPS)" },
+    { "id": "outdated-site", "category": "NEED", "kind": "check", "source": "html", "pattern": "", "serviceLine": "Website", "weight": 10, "label": "Website looks out of date (copyright 3+ years old)" },
+    { "id": "free-webmail", "category": "NEED", "kind": "present", "source": "html", "pattern": "[a-z0-9._%+-]+@(gmail|yahoo|rediffmail|hotmail)\\.(com|co\\.in)", "serviceLine": "Digital setup", "weight": 10, "label": "Business email on a free webmail address" },
+    { "id": "basic-contact", "category": "NEED", "kind": "absent", "source": "html", "pattern": "(calendly|book an appointment|booking|log ?in|sign ?in|portal|tawk\\.to|chat)", "serviceLine": "Custom app", "weight": 5, "label": "Contact only by phone, email or a basic form" },
+
+    { "id": "mx-google", "category": "STACK", "kind": "present", "source": "dns-mx", "pattern": "(aspmx\\.l\\.google\\.com|googlemail\\.com)\\.?$", "serviceLine": "", "weight": 2, "label": "Email: Google Workspace" },
+    { "id": "mx-microsoft", "category": "STACK", "kind": "present", "source": "dns-mx", "pattern": "mail\\.protection\\.outlook\\.com\\.?$", "serviceLine": "", "weight": 2, "label": "Email: Microsoft 365" },
+    { "id": "mx-zoho", "category": "STACK", "kind": "present", "source": "dns-mx", "pattern": "(^|\\.)mx\\d*\\.zoho\\.(in|com|eu|com\\.au)\\.?$", "serviceLine": "", "weight": 2, "label": "Email: Zoho Mail" },
+    { "id": "site-wordpress", "category": "STACK", "kind": "present", "source": "html", "pattern": "wp-content/", "serviceLine": "", "weight": 1, "label": "Website: WordPress" },
+    { "id": "site-woocommerce", "category": "STACK", "kind": "present", "source": "html", "pattern": "woocommerce", "serviceLine": "", "weight": 1, "label": "Store: WooCommerce" },
+    { "id": "site-shopify", "category": "STACK", "kind": "present", "source": "html", "pattern": "cdn\\.shopify\\.com", "serviceLine": "", "weight": 1, "label": "Store: Shopify" },
+    { "id": "site-wix", "category": "STACK", "kind": "present", "source": "html", "pattern": "(wixstatic\\.com|static\\.wixstatic)", "serviceLine": "", "weight": 1, "label": "Website: Wix" },
+    { "id": "pay-razorpay", "category": "STACK", "kind": "present", "source": "html", "pattern": "checkout\\.razorpay\\.com", "serviceLine": "", "weight": 1, "label": "Payments: Razorpay" },
+    { "id": "app-zoho", "category": "STACK", "kind": "present", "source": "html", "pattern": "(zohopublic\\.(com|in|eu)|salesiq\\.zoho|books\\.zoho)", "serviceLine": "", "weight": 1, "label": "Business apps: Zoho" },
+    { "id": "app-hubspot", "category": "STACK", "kind": "present", "source": "html", "pattern": "js\\.hs-scripts\\.com", "serviceLine": "", "weight": 1, "label": "Business apps: HubSpot" },
+    { "id": "app-odoo", "category": "STACK", "kind": "present", "source": "html", "pattern": "(/web/assets/|odoo\\.com)", "serviceLine": "", "weight": 1, "label": "Business apps: Odoo" }
   ]
 }

@@ -4,9 +4,9 @@ import { useState } from "react";
 import type { ScanResult } from "@/signals/scan";
 
 const labelColor: Record<string, string> = {
-  Confirmed: "#1F7A4D",
-  Likely: "#3B4FD6",
-  Possible: "#8A5A00",
+  High: "#1F7A4D",
+  Medium: "#3B4FD6",
+  Low: "#8A5A00",
   None: "#6B6F88",
 };
 
@@ -37,11 +37,14 @@ export default function Home() {
     }
   }
 
+  const need = result?.signals.filter((s) => s.category === "NEED") ?? [];
+
   return (
     <main style={{ maxWidth: 880, margin: "0 auto", padding: "48px 16px" }}>
       <h1 style={{ fontSize: 32, marginBottom: 4 }}>LeadItNow</h1>
       <p style={{ color: "#4A4F6A", marginTop: 0 }}>
-        Check whether a business runs on Zoho, using only its public DNS records and web pages.
+        See whether a business is likely to need software or IT services, using only its public DNS records and web
+        pages.
       </p>
 
       <form onSubmit={scan} style={{ display: "flex", gap: 8, margin: "24px 0", flexWrap: "wrap" }}>
@@ -58,7 +61,7 @@ export default function Home() {
           disabled={busy}
           style={{ padding: "10px 18px", fontSize: 16, background: "#3B4FD6", color: "#fff", border: 0, borderRadius: 8 }}
         >
-          {busy ? "Scanning… (up to a minute)" : "Scan for Zoho signals"}
+          {busy ? "Scanning… (up to a minute)" : "Scan for need signals"}
         </button>
       </form>
 
@@ -68,31 +71,31 @@ export default function Home() {
         <section style={{ background: "#fff", border: "1px solid #E1E3EF", borderRadius: 12, padding: 24 }}>
           <h2 style={{ marginTop: 0, fontSize: 22 }}>
             {result.domain}:{" "}
-            <span style={{ color: labelColor[result.zoho.label] }}>
-              {result.zoho.label} ({result.zoho.score}/100)
+            <span style={{ color: labelColor[result.need.label] }}>
+              {result.need.label} need ({result.need.score}/100)
             </span>
           </h2>
-          <p style={{ color: "#4A4F6A" }}>
-            Zoho apps detected: {result.zoho.apps.length ? result.zoho.apps.join(", ") : "none"}
-            {result.zoho.likelyZohoOne && " · likely Zoho One"}
-            {result.zoho.customNeed && " · already customising Zoho (priority account)"}
+          <p style={{ color: "#4A4F6A", margin: "4px 0" }}>
+            Lead with: {result.need.serviceHints.length ? result.need.serviceHints.join(", ") : "general introduction"}
+            {result.need.strongIntent && " · strong intent (referral or hiring)"}
           </p>
-          {result.signals.length > 0 && (
+          <p style={{ color: "#4A4F6A", margin: "4px 0 16px" }}>
+            Current stack (internal context, never mention in outreach):{" "}
+            {result.need.stack.length ? result.need.stack.join(", ") : "not detected"}
+          </p>
+          {need.length > 0 && (
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
               <thead>
                 <tr style={{ textAlign: "left", borderBottom: "1px solid #E1E3EF" }}>
-                  <th style={{ padding: 6 }}>Signal</th>
+                  <th style={{ padding: 6 }}>Need signal</th>
                   <th style={{ padding: 6 }}>Weight</th>
                   <th style={{ padding: 6 }}>Evidence</th>
                 </tr>
               </thead>
               <tbody>
-                {result.signals.map((s) => (
+                {need.map((s) => (
                   <tr key={s.ruleId} style={{ borderBottom: "1px solid #F0F1F7" }}>
-                    <td style={{ padding: 6 }}>
-                      {s.label}
-                      {!s.verified && <em style={{ color: "#8A5A00" }}> (to confirm)</em>}
-                    </td>
+                    <td style={{ padding: 6 }}>{s.label}</td>
                     <td style={{ padding: 6 }}>{s.weight}</td>
                     <td style={{ padding: 6, wordBreak: "break-all", color: "#4A4F6A" }}>{s.evidence}</td>
                   </tr>
