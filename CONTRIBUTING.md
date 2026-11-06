@@ -2,7 +2,7 @@
 
 Every change (code, config, infra or docs) ships as one unit of work, in this order:
 
-1. **Jira**: create or update the issue in the LeadItNow epics; mark it Done if shipped, To Do if planned.
+1. **Jira**: create or update the issue in the LeadItNow epics (Jira project [LDITNW](https://ainformatiq.atlassian.net/jira/software/projects/LDITNW/boards)); mark it Done if shipped, To Do if planned.
 2. **CHANGELOG.md**: add a dated entry with the Jira issue key(s).
 3. **MANUAL.md**: update it when users will see the change. Purely internal refactors are exempt from this step only.
 4. **Commit and push**, referencing the issue key in the commit message.

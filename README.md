@@ -4,6 +4,12 @@ LeadItNow finds Indian businesses that are likely to need software or IT service
 
 Product spec: LeadItNow product spec (Claude doc) · Part of the AInformatIQ product family (TestItNow, BreakItNow, BuilditNow).
 
+## Links
+
+- Code: https://github.com/unitedbusinessglobal/leaditnow
+- Backlog: Jira project LDITNW (https://ainformatiq.atlassian.net/browse/LDITNW-1), epics LDITNW-1 to 5
+- Hosting: Vercel project `leaditnow` (region bom1)
+
 ## What works today (v0.2)
 
 - **Need-signal scanner** (`src/signals/`): checks a domain's public website (home page plus up to 10 same-site pages, robots.txt honoured, 1 request a second) and DNS for:
