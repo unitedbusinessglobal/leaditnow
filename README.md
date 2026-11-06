@@ -16,7 +16,7 @@ Product spec: LeadItNow product spec (Claude doc) · Part of the AInformatIQ pro
   - **Need signals** (scored): sells products with no online ordering, sells only via marketplaces, not mobile-friendly, no HTTPS, out-of-date copyright, free webmail contact, contact by basic form only; plus manual signals for referrals, IT job posts and growth news.
   - **Stack signals** (context, max 5 points): email provider, website platform, store and payment tools, visible business apps.
 - **Scoring**: need score (0-100, High / Medium / Low / None), service-line hints, current stack, fit score and priority.
-- **Web page** at `/` and API `POST /api/scan` `{ "domain": "acme.co.in" }`.
+- **Web page** at `/` and API `POST /api/scan` `{ "domain": "acme.co.in" }` or `GET /api/scan?domain=acme.co.in`. Live at https://leaditnow.vercel.app (Vercel login required).
 - **CLI**: `npm run scan -- acme.co.in other.in`.
 - **Data model** in `prisma/schema.prisma` for the MVP, including `Deal.indiaOriginated` for the intercompany revenue share.
 
