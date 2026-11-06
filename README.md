@@ -8,7 +8,7 @@ Product spec: LeadItNow product spec (Claude doc) · Part of the AInformatIQ pro
 
 - Code: https://github.com/unitedbusinessglobal/leaditnow
 - Backlog: Jira project LDITNW (https://ainformatiq.atlassian.net/browse/LDITNW-1), epics LDITNW-1 to 5
-- Hosting: Vercel project `leaditnow` (region bom1)
+- Hosting: Vercel project `leaditnow` (region sin1, Singapore, next to the Neon database)
 
 ## What works today (v0.2)
 
