@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-11-06 — v0.3.0 sprint 1 and beyond
+
+- Sign-in: Google (invite-only), Founder bootstrap from `FOUNDER_EMAIL`, roles and permissions, Team page; email test sign-in on local and preview builds only (LDITNW-7).
+- CSV import with column matching, merge by domain then phone, gap-filling, contacts once, DPDP source (LDITNW-8).
+- Add a company by domain: duplicate check, first contact, scan saved at once (LDITNW-9).
+- Pipeline board with 8 stages; exit rules enforced one stage at a time; contract stages for Director and Founder; Lost with reason; stuck flags (LDITNW-10).
+- Scans saved to the account with evidence; nightly Vercel Cron scans new accounts and re-scans after 30 days (LDITNW-11).
+- Manual signals: referral, IT job post, growth news (LDITNW-12).
+- Fit and priority computed from profile, decision-maker contacts and referrals; accounts list sorts and filters (LDITNW-14).
+- My day: due and overdue tasks, open deals, next accounts to work (LDITNW-15).
+- Call, meeting, email, WhatsApp and note logging; calls and meetings need a dated next step that becomes a task (LDITNW-17).
+- Approvals: discounts above 10%, edited clauses and off-list pricing go to the Founder; decisions audited (LDITNW-22).
+- Dashboard: pipeline by stage and service line, stuck deals, 7-day activity per person (LDITNW-23, without the weekly email).
+- Invoices, payments and the monthly Net Revenue statement with the 60/40 split, fee components and development reserve, CSV export (LDITNW-24).
+- Prisma on the Rust-free client with `@prisma/adapter-pg` and `attachDatabasePool`; migrations generated from the schema by GitHub Actions; CI runs type checks and database tests on Postgres.
+- `/api/scan` now needs a signed-in user or the `CRON_SECRET` bearer token.
+
 ## 2026-11-06 — Neon Singapore
 
 - Build waits up to 30s (plus one retry) for a paused Neon branch to wake before migrating (LDITNW-11).

@@ -1,0 +1,33 @@
+name: CI
+# Type-check and run all tests, including the database tests against a throwaway Postgres
+# with the committed migrations applied the same way Vercel applies them.
+on:
+  push:
+    branches: [main, dev, qa, uat]
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: leaditnow_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/leaditnow_test
+      DATABASE_URL_UNPOOLED: postgresql://postgres:postgres@localhost:5432/leaditnow_test
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/leaditnow_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npx prisma migrate deploy
+      - run: npx prisma generate
+      - run: npm run lint
+      - run: npm test

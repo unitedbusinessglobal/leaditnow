@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import "./globals.css";
 
 export const metadata = {
   title: "LeadItNow",
@@ -8,16 +9,7 @@ export const metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <body
-        style={{
-          margin: 0,
-          fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
-          background: "#F7F7FB",
-          color: "#1C2040",
-        }}
-      >
-        {children}
-      </body>
+      <body>{children}</body>
     </html>
   );
 }
