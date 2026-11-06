@@ -1,0 +1,250 @@
+// LeadItNow data model. Every table carries orgId so the product can go multi-tenant later.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+enum Role {
+  FOUNDER
+  HEAD
+  BA
+  SALES
+  INTERN
+}
+
+enum DealStage {
+  TARGET
+  OUTREACH
+  DISCOVERY
+  PROTOTYPE_DEMO
+  MOU_SCOPING
+  MSA_SOW
+  ONBOARD
+  RENEW_EXPAND
+  LOST
+}
+
+enum ActivityType {
+  EMAIL
+  WHATSAPP
+  CALL
+  MEETING
+  NOTE
+  STAGE_CHANGE
+}
+
+enum DocumentKind {
+  MOU
+  MSA
+  SOW
+  PROPOSAL
+}
+
+enum DocumentStatus {
+  DRAFT
+  SENT
+  SIGNED
+  DECLINED
+}
+
+enum ScanStatus {
+  QUEUED
+  RUNNING
+  DONE
+  FAILED
+}
+
+model Organization {
+  id        String    @id @default(cuid())
+  name      String
+  plan      String    @default("internal")
+  createdAt DateTime  @default(now())
+  users     User[]
+  accounts  Account[]
+}
+
+model User {
+  id        String       @id @default(cuid())
+  orgId     String
+  org       Organization @relation(fields: [orgId], references: [id])
+  email     String       @unique
+  name      String
+  role      Role
+  active    Boolean      @default(true)
+  createdAt DateTime     @default(now())
+  accounts  Account[]    @relation("AccountOwner")
+  deals     Deal[]       @relation("DealOwner")
+  tasks     Task[]       @relation("TaskOwner")
+}
+
+model Account {
+  id         String          @id @default(cuid())
+  orgId      String
+  org        Organization    @relation(fields: [orgId], references: [id])
+  name       String
+  domain     String
+  gstin      String?
+  industry   String?
+  city       String?
+  staffSize  Int?
+  zohoScore  Int             @default(0)
+  zohoLabel  String          @default("None")
+  fitScore   Int             @default(0)
+  priority   Int             @default(0)
+  customNeed Boolean         @default(false)
+  ownerId    String?
+  owner      User?           @relation("AccountOwner", fields: [ownerId], references: [id])
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  contacts   Contact[]
+  signals    Signal[]
+  scans      ScanRun[]
+  briefs     ResearchBrief[]
+  deals      Deal[]
+
+  @@unique([orgId, domain])
+  @@index([orgId, priority])
+}
+
+model Contact {
+  id            String     @id @default(cuid())
+  orgId         String
+  accountId     String
+  account       Account    @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  name          String
+  title         String?
+  email         String?
+  phone         String?
+  whatsappOptIn Boolean    @default(false)
+  language      String     @default("en") // en | ta
+  consentSource String // where we got this contact and why (DPDP Act)
+  optedOutAt    DateTime?
+  createdAt     DateTime   @default(now())
+  activities    Activity[]
+}
+
+model Signal {
+  id        String   @id @default(cuid())
+  orgId     String
+  accountId String
+  account   Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  ruleId    String
+  zohoApp   String
+  weight    Int
+  verified  Boolean
+  evidence  String // DNS record or page URL plus matched text
+  foundAt   DateTime @default(now())
+  scanRunId String?
+
+  @@index([accountId])
+}
+
+model ScanRun {
+  id         String     @id @default(cuid())
+  orgId      String
+  accountId  String
+  account    Account    @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  status     ScanStatus @default(QUEUED)
+  pages      String[]
+  error      String?
+  startedAt  DateTime   @default(now())
+  finishedAt DateTime?
+}
+
+model ResearchBrief {
+  id           String   @id @default(cuid())
+  orgId        String
+  accountId    String
+  account      Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  summary      String
+  processes    String
+  painPoints   String
+  sources      String[]
+  model        String
+  reviewedById String?
+  createdAt    DateTime @default(now())
+}
+
+model Deal {
+  id         String     @id @default(cuid())
+  orgId      String
+  accountId  String
+  account    Account    @relation(fields: [accountId], references: [id])
+  title      String
+  offer      String // custom module, replacement, vertical app, product
+  stage      DealStage  @default(TARGET)
+  valueInr   Int?
+  nextStep   String?
+  nextStepAt DateTime?
+  ownerId    String?
+  owner      User?      @relation("DealOwner", fields: [ownerId], references: [id])
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  activities Activity[]
+  documents  Document[]
+
+  @@index([orgId, stage])
+}
+
+model Activity {
+  id        String       @id @default(cuid())
+  orgId     String
+  type      ActivityType
+  direction String? // in | out
+  outcome   String?
+  body      String?
+  at        DateTime     @default(now())
+  userId    String?
+  contactId String?
+  contact   Contact?     @relation(fields: [contactId], references: [id])
+  dealId    String?
+  deal      Deal?        @relation(fields: [dealId], references: [id])
+}
+
+model Task {
+  id         String    @id @default(cuid())
+  orgId      String
+  title      String
+  dueAt      DateTime
+  done       Boolean   @default(false)
+  ownerId    String
+  owner      User      @relation("TaskOwner", fields: [ownerId], references: [id])
+  entity     String? // Account | Deal | Contact
+  entityId   String?
+  createdAt  DateTime  @default(now())
+  finishedAt DateTime?
+
+  @@index([ownerId, done, dueAt])
+}
+
+model Document {
+  id        String         @id @default(cuid())
+  orgId     String
+  dealId    String
+  deal      Deal           @relation(fields: [dealId], references: [id])
+  kind      DocumentKind
+  version   Int            @default(1)
+  status    DocumentStatus @default(DRAFT)
+  esignId   String?
+  fileKey   String?
+  createdAt DateTime       @default(now())
+}
+
+model AuditLog {
+  id       String   @id @default(cuid())
+  orgId    String
+  actorId  String?
+  entity   String
+  entityId String
+  action   String
+  diff     Json?
+  at       DateTime @default(now())
+
+  @@index([orgId, entity, entityId])
+}
