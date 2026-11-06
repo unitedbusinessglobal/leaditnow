@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-05 — database migration
+
+- Initial migration `prisma/migrations/0001_init` (12 tables, enums, indexes) generated from the schema by a GitHub workflow; apply with `npm run db:deploy` (LDITNW-11).
+
 ## 2026-11-05 — backlog and links
 
 - Jira project LDITNW set up: epics LDITNW-1 to LDITNW-5, stories LDITNW-7 to LDITNW-26.
