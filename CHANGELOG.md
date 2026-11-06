@@ -15,6 +15,7 @@
 - Dashboard: pipeline by stage and service line, stuck deals, 7-day activity per person (LDITNW-23, without the weekly email).
 - Invoices, payments and the monthly Net Revenue statement with the 60/40 split, fee components and development reserve, CSV export (LDITNW-24).
 - Prisma on the Rust-free client with `@prisma/adapter-pg` and `attachDatabasePool`; migrations generated from the schema by GitHub Actions; CI runs type checks and database tests on Postgres.
+- Vercel bundles now include Prisma's query-compiler wasm (`outputFileTracingIncludes`); without it every database call failed in production.
 - `/api/scan` now needs a signed-in user or the `CRON_SECRET` bearer token.
 
 ## 2026-11-06 — Neon Singapore
