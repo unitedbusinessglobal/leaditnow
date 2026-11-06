@@ -1,7 +1,8 @@
 // LeadItNow data model. Every table carries orgId so the product can go multi-tenant later.
 
 generator client {
-  provider = "prisma-client-js"
+  provider   = "prisma-client-js"
+  engineType = "client"
 }
 
 datasource db {
@@ -58,6 +59,18 @@ enum SignalCategory {
   STACK
 }
 
+enum ApprovalKind {
+  DISCOUNT
+  TERMS
+  PRICING
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum ScanStatus {
   QUEUED
   RUNNING
@@ -82,10 +95,12 @@ model User {
   name      String
   role      Role
   active    Boolean      @default(true)
+  lastLoginAt DateTime?
   createdAt DateTime     @default(now())
   accounts  Account[]    @relation("AccountOwner")
   deals     Deal[]       @relation("DealOwner")
   tasks     Task[]       @relation("TaskOwner")
+  activities Activity[]  @relation("ActivityUser")
 }
 
 model Account {
@@ -98,6 +113,11 @@ model Account {
   industry   String?
   city       String?
   staffSize  Int?
+  phone      String?
+  source     String          @default("manual") // manual | csv:<file> | hubspot | apollo
+  sourceNote String? // where the record came from and why we hold it (DPDP Act)
+  notes      String?
+  lastScannedAt DateTime?
   needScore   Int             @default(0)
   needLabel   String          @default("None")
   stack       String[]
@@ -113,8 +133,10 @@ model Account {
   scans      ScanRun[]
   briefs     ResearchBrief[]
   deals      Deal[]
+  activities Activity[]
 
   @@unique([orgId, domain])
+  @@index([orgId, phone])
   @@index([orgId, priority])
 }
 
@@ -147,6 +169,8 @@ model Signal {
   evidence    String // DNS record or page URL plus matched text
   foundAt   DateTime @default(now())
   scanRunId String?
+  manual    Boolean  @default(false)
+  addedById String?
 
   @@index([accountId])
 }
@@ -189,12 +213,21 @@ model Deal {
   valueInr   Int?
   nextStep   String?
   nextStepAt DateTime?
+  stageChangedAt DateTime @default(now())
+  pain       String? // discovery: the problem in the client's words
+  budgetInr  Int? // discovery: budget the client confirmed
+  championContactId String? // demo: the person who backs us internally
+  liveAt     DateTime? // onboard: client live in production
+  lostReason String?
+  discountPct Int       @default(0)
   ownerId    String?
   owner      User?      @relation("DealOwner", fields: [ownerId], references: [id])
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
   activities Activity[]
   documents  Document[]
+  approvals  Approval[]
+  invoices   Invoice[]
 
   @@index([orgId, stage])
 }
@@ -208,10 +241,16 @@ model Activity {
   body      String?
   at        DateTime     @default(now())
   userId    String?
+  user      User?        @relation("ActivityUser", fields: [userId], references: [id])
+  accountId String?
+  account   Account?     @relation(fields: [accountId], references: [id], onDelete: Cascade)
   contactId String?
   contact   Contact?     @relation(fields: [contactId], references: [id])
   dealId    String?
   deal      Deal?        @relation(fields: [dealId], references: [id])
+
+  @@index([orgId, at])
+  @@index([accountId])
 }
 
 model Task {
@@ -254,4 +293,40 @@ model AuditLog {
   at       DateTime @default(now())
 
   @@index([orgId, entity, entityId])
+}
+
+model Approval {
+  id            String         @id @default(cuid())
+  orgId         String
+  dealId        String
+  deal          Deal           @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  kind          ApprovalKind
+  detail        String
+  discountPct   Int?
+  status        ApprovalStatus @default(PENDING)
+  requestedById String
+  decidedById   String?
+  decisionNote  String?
+  decidedAt     DateTime?
+  createdAt     DateTime       @default(now())
+
+  @@index([orgId, status])
+}
+
+/// Client invoices raised by the India entity; drive the monthly Net Revenue statement for the licence fee.
+model Invoice {
+  id           String    @id @default(cuid())
+  orgId        String
+  dealId       String
+  deal         Deal      @relation(fields: [dealId], references: [id])
+  number       String
+  issuedAt     DateTime
+  amountInr    Int // taxable value, excluding GST
+  gstInr       Int       @default(0)
+  collectedInr Int       @default(0)
+  collectedAt  DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@unique([orgId, number])
+  @@index([orgId, issuedAt])
 }

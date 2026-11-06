@@ -1,0 +1,48 @@
+name: Migrations from schema
+# When prisma/schema.prisma changes, compare it with the committed migrations on a throwaway
+# Postgres and commit any missing SQL as a new migration. Vercel builds then apply it.
+on:
+  push:
+    branches: [main]
+    paths: ["prisma/schema.prisma"]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  diff:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - name: Diff committed migrations against the schema
+        env:
+          SHADOW: postgresql://postgres:postgres@localhost:5432/postgres
+        run: |
+          npx prisma migrate diff --from-migrations prisma/migrations --to-schema-datamodel prisma/schema.prisma \
+            --shadow-database-url "$SHADOW" --script > /tmp/diff.sql
+          if grep -qE '^(CREATE|ALTER|DROP)' /tmp/diff.sql; then
+            name="$(date -u +%Y%m%d%H%M%S)_schema"
+            mkdir -p "prisma/migrations/$name"
+            cp /tmp/diff.sql "prisma/migrations/$name/migration.sql"
+            echo "NEW=$name" >> "$GITHUB_ENV"
+          fi
+      - name: Commit new migration
+        if: env.NEW != ''
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add prisma/migrations
+          git commit -m "Migration ${NEW} generated from schema"
+          git pull --rebase
+          git push

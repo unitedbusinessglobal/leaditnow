@@ -17,13 +17,18 @@
   "dependencies": {
     "@neon/config": "^1.11.3",
     "@neon/env": "^1.6.15",
+    "@prisma/adapter-pg": "^6.19.3",
     "@prisma/client": "^6.0.0",
+    "@vercel/functions": "^3.11.0",
     "next": "^15.0.0",
+    "next-auth": "^5.0.0-beta.30",
+    "pg": "^8.23.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "prisma": "^6.0.0",
