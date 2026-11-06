@@ -3,7 +3,7 @@
 ## 2026-11-06 — Neon Singapore
 
 - Linked to Neon project `polished-cell-49111239` with `neon init` (`neon.ts`, `@neon/config`, `@neon/env`; `.neon` is git-ignored).
-- dev, qa and uat now use the Neon Singapore branches; Vercel functions moved to Singapore (sin1) to sit next to the database; prod moves when its Singapore string is ready (LDITNW-11).
+- All four environments (dev, qa, uat, production) now use the Neon Singapore branches; Vercel functions moved to Singapore (sin1) to sit next to the database; production moved to Singapore too (LDITNW-11).
 
 ## 2026-11-05 — database migration
 
