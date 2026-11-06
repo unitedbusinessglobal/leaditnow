@@ -14,7 +14,7 @@
     { "id": "free-webmail", "category": "NEED", "kind": "present", "source": "html", "pattern": "[a-z0-9._%+-]+@(gmail|yahoo|rediffmail|hotmail)\\.(com|co\\.in)", "serviceLine": "Digital setup", "weight": 10, "label": "Business email on a free webmail address" },
     { "id": "basic-contact", "category": "NEED", "kind": "absent", "source": "html", "pattern": "(calendly|book an appointment|booking|log ?in|sign ?in|portal|tawk\\.to|chat)", "serviceLine": "Custom app", "weight": 5, "label": "Contact only by phone, email or a basic form" },
 
-    { "id": "mx-google", "category": "STACK", "kind": "present", "source": "dns-mx", "pattern": "(aspmx\\.l\\.google\\.com|googlemail\\.com)\\.?$", "serviceLine": "", "weight": 2, "label": "Email: Google Workspace" },
+    { "id": "mx-google", "category": "STACK", "kind": "present", "source": "dns-mx", "pattern": "(aspmx\\.l\\.google\\.com|smtp\\.google\\.com|googlemail\\.com)\\.?$", "serviceLine": "", "weight": 2, "label": "Email: Google Workspace" },
     { "id": "mx-microsoft", "category": "STACK", "kind": "present", "source": "dns-mx", "pattern": "mail\\.protection\\.outlook\\.com\\.?$", "serviceLine": "", "weight": 2, "label": "Email: Microsoft 365" },
     { "id": "mx-zoho", "category": "STACK", "kind": "present", "source": "dns-mx", "pattern": "(^|\\.)mx\\d*\\.zoho\\.(in|com|eu|com\\.au)\\.?$", "serviceLine": "", "weight": 2, "label": "Email: Zoho Mail" },
     { "id": "site-wordpress", "category": "STACK", "kind": "present", "source": "html", "pattern": "wp-content/", "serviceLine": "", "weight": 1, "label": "Website: WordPress" },

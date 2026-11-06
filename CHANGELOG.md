@@ -6,6 +6,7 @@
 - README and CONTRIBUTING link the Jira project and GitHub repo.
 - Vercel project connected to GitHub (Node 22); `main` deploys to production.
 - Scan API also answers `GET /api/scan?domain=…` (LDITNW-6).
+- Scan result lists the raw MX hosts; Google Workspace detection also covers `smtp.google.com` (LDITNW-6).
 
 ## 2026-11-05 — v0.2.0 broader positioning (LDITNW-6)
 

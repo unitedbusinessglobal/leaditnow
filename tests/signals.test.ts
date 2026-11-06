@@ -15,6 +15,7 @@ describe("DNS stack signals", () => {
     const m = matchDns({ mx: ["aspmx.l.google.com"], txt: [] });
     expect(ids(m)).toEqual(["mx-google"]);
     expect(m[0].category).toBe("STACK");
+    expect(ids(matchDns({ mx: ["smtp.google.com"], txt: [] }))).toEqual(["mx-google"]);
     expect(ids(matchDns({ mx: ["acme-in.mail.protection.outlook.com"], txt: [] }))).toEqual(["mx-microsoft"]);
     expect(ids(matchDns({ mx: ["mx.zoho.in", "mx2.zoho.in"], txt: [] }))).toEqual(["mx-zoho"]);
   });

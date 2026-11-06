@@ -104,7 +104,7 @@ export default function Home() {
             </table>
           )}
           <p style={{ color: "#6B6F88", fontSize: 13 }}>
-            {result.pagesScanned.length} page(s) checked · {new Date(result.scannedAt).toLocaleString()}
+            {result.pagesScanned.length} page(s) checked · MX: {result.mx?.length ? result.mx.join(", ") : "none found"} · {new Date(result.scannedAt).toLocaleString()}
           </p>
         </section>
       )}

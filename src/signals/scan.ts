@@ -1,4 +1,4 @@
-import { scanDns } from "./dns";
+import { lookupDns, matchDns } from "./dns";
 import { scanWebsite } from "./web";
 import { needScore, type NeedScore } from "./score";
 import type { SignalMatch } from "./rules";
@@ -7,6 +7,8 @@ export interface ScanResult {
   domain: string;
   scannedAt: string;
   pagesScanned: string[];
+  /** Raw MX hosts found, shown so a BA can check the email-provider call. */
+  mx: string[];
   signals: SignalMatch[];
   need: NeedScore;
 }
@@ -23,12 +25,13 @@ export function normaliseDomain(input: string): string {
 /** Run DNS and website checks in parallel and score the result. */
 export async function scanDomain(input: string): Promise<ScanResult> {
   const domain = normaliseDomain(input);
-  const [dnsMatches, web] = await Promise.all([scanDns(domain), scanWebsite(domain)]);
-  const signals = [...dnsMatches, ...web.matches];
+  const [records, web] = await Promise.all([lookupDns(domain), scanWebsite(domain)]);
+  const signals = [...matchDns(records), ...web.matches];
   return {
     domain,
     scannedAt: new Date().toISOString(),
     pagesScanned: web.pagesScanned,
+    mx: records.mx,
     signals,
     need: needScore(signals),
   };
