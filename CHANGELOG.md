@@ -2,6 +2,7 @@
 
 ## 2026-11-05 — database migration
 
+- Vercel builds apply pending migrations to their own Neon branch (`vercel-build` script); prod and qa connected; `GET /api/health` reports database status (LDITNW-11).
 - Initial migration `prisma/migrations/0001_init` (12 tables, enums, indexes) generated from the schema by a GitHub workflow; apply with `npm run db:deploy` (LDITNW-11).
 
 ## 2026-11-05 — backlog and links
