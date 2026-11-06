@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-11-06 — Neon Singapore
+
+- Linked to Neon project `polished-cell-49111239` with `neon init` (`neon.ts`, `@neon/config`, `@neon/env`; `.neon` is git-ignored).
+- dev and qa now use the Neon Singapore branches; prod moves when its Singapore string is ready (LDITNW-11).
+
 ## 2026-11-05 — database migration
 
 - Vercel builds apply pending migrations to their own Neon branch (`vercel-build` script); prod and qa connected; `GET /api/health` reports database status (LDITNW-11).
