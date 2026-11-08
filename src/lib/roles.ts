@@ -19,7 +19,8 @@ export type Action =
   | "accounts.import"
   | "deals.edit"
   | "deals.contract"
-  | "activities.log";
+  | "activities.log"
+  | "leads.find";
 
 const MATRIX: Record<Action, Role[]> = {
   "users.manage": ["FOUNDER", "DIRECTOR"],
@@ -34,6 +35,8 @@ const MATRIX: Record<Action, Role[]> = {
   // Moving a deal into contract stages (MOU, MSA) or recording signed documents.
   "deals.contract": ["FOUNDER", "DIRECTOR"],
   "activities.log": ["FOUNDER", "DIRECTOR", "BA", "SALES", "INTERN"],
+  // Running lead searches and revealing Apollo contacts (which uses paid credits).
+  "leads.find": ["FOUNDER", "DIRECTOR", "BA"],
 };
 
 export function can(role: Role, action: Action): boolean {

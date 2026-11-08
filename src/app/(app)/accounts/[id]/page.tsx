@@ -10,12 +10,14 @@ import { Timeline } from "@/components/Timeline";
 import { RULES } from "@/signals/rules";
 import { STAGE_LABEL, SERVICE_LINES } from "@/domain/deals";
 import { completeTask } from "../../work/actions";
+import { searchApolloPeople, type ApolloPerson } from "@/discovery/apollo";
+import { revealContact } from "../../leads/actions";
 import { updateAccount, rescan, addSignal, removeSignal, addContact, optOutContact, createDeal } from "../actions";
 
 const ruleLabel = (id: string) => RULES.find((r) => r.id === id)?.label ?? id;
 
 export default async function AccountPage({ params, searchParams }: {
-  params: Promise<{ id: string }>; searchParams: Promise<{ ok?: string; error?: string }>;
+  params: Promise<{ id: string }>; searchParams: Promise<{ ok?: string; error?: string; people?: string }>;
 }) {
   const user = await requireUser();
   const { id } = await params;
@@ -41,6 +43,15 @@ export default async function AccountPage({ params, searchParams }: {
   const contactable = a.contacts.filter((c) => !c.optedOutAt);
   const backTo = `/accounts/${a.id}`;
   const lastScan = a.scans[0];
+  // Apollo people search uses no credits; only adding a person (revealing the email) does.
+  const apollo = Boolean(process.env.APOLLO_API_KEY) && can(user.role, "leads.find");
+  let people: ApolloPerson[] | null = null;
+  let peopleError: string | null = null;
+  if (apollo && sp.people === "1") {
+    try { people = await searchApolloPeople(a.domain, process.env.APOLLO_API_KEY!); }
+    catch (e) { peopleError = (e as Error).message; }
+  }
+  const known = new Set(a.contacts.map((c) => c.name.toLowerCase()));
 
   return (
     <div className="stack">
@@ -209,6 +220,32 @@ export default async function AccountPage({ params, searchParams }: {
                 </li>
               ))}
             </ul>
+            {apollo && (
+              <div style={{ marginTop: 12 }}>
+                {people === null && !peopleError && <Link className="btn btn-sm" href={`/accounts/${a.id}?people=1`}>Find decision makers (Apollo)</Link>}
+                {peopleError && <p className="notice error">{peopleError}</p>}
+                {people && people.length === 0 && <p className="faint">Apollo has no decision makers for {a.domain}.</p>}
+                {people && people.length > 0 && (
+                  <div>
+                    <h3>Decision makers on Apollo</h3>
+                    <p className="faint" style={{ marginTop: 0 }}>Adding a person reveals their work email and uses Apollo credits.</p>
+                    <ul className="timeline">
+                      {people.map((p) => (
+                        <li key={p.id} className="row" style={{ justifyContent: "space-between" }}>
+                          <span>{p.name}{p.title && <span className="muted"> · {p.title}</span>}</span>
+                          {known.has(p.name.toLowerCase()) ? <span className="faint">added</span> : (
+                            <form action={revealContact}>
+                              <input type="hidden" name="accountId" value={a.id} /><input type="hidden" name="personId" value={p.id} />
+                              <button className="btn btn-sm">Add</button>
+                            </form>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
             {edit && (
               <details style={{ marginTop: 12 }}>
                 <summary>Add contact</summary>

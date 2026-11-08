@@ -21,6 +21,7 @@ Product spec: LeadItNow product spec (Claude doc) · Part of the AInformatIQ pro
 - **Dashboard**: pipeline by stage and service line, stuck deals, activity per person over 7 days.
 - **Net Revenue statement**: invoices and payments per deal; monthly statement on India-originated collections with the 60/40 split, fee components (20/25/15) and 15% development reserve; CSV export.
 - **Scanner** (`src/signals/`): public website and DNS need signals and stack context, as in v0.2; **Quick scan** page; `GET|POST /api/scan` (signed in, or `Authorization: Bearer $CRON_SECRET`); daily Vercel Cron re-scans new and 30-day-old accounts.
+- **Find leads** (`src/discovery/`): industry and city searches on OpenStreetMap, Wikidata, Google Places (`GOOGLE_PLACES_API_KEY`) and Apollo (`APOLLO_API_KEY`); own-website results become scanned accounts, the rest a review list; weekly saved searches; Apollo decision makers on the account page.
 - **Health**: `GET /api/health` shows the environment, database endpoint and applied migrations.
 
 Rules and weights live in `src/signals/signals.json`, so they can change without code changes. Test each rule on 10 known businesses before relying on it.

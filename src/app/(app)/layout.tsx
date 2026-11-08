@@ -18,6 +18,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         <div className="brand">LeadItNow</div>
         <Link href="/">My day</Link>
         <Link href="/accounts">Accounts</Link>
+        {can(user.role, "leads.find") && <Link href="/leads">Find leads</Link>}
         <Link href="/pipeline">Pipeline</Link>
         <Link href="/scan">Quick scan</Link>
         {can(user.role, "dashboard.view") && <Link href="/dashboard">Dashboard</Link>}

@@ -27,12 +27,14 @@ export function parseCsv(text: string): string[][] {
   return rows;
 }
 
-export type Field = "name" | "domain" | "city" | "industry" | "staffSize" | "phone" | "contactName" | "contactTitle" | "contactEmail" | "contactPhone";
+export type Field = "name" | "domain" | "city" | "industry" | "staffSize" | "phone" | "contactName" | "contactTitle" | "contactEmail" | "contactPhone" | "externalId" | "status";
 
 /** Header guesses for Apollo, HubSpot and hand-made sheets. */
 const HEADER_HINTS: Record<Field, RegExp> = {
   domain: /^(website|domain|company domain|company website|url|web)/i,
   name: /^(company|company name|account|account name|organi[sz]ation|business)( name)?$/i,
+  externalId: /^(cin|corporate identification number|company id|registration number|llpin)$/i,
+  status: /^(company status|status|llp status)$/i,
   city: /^(city|company city|location|town)$/i,
   industry: /^(industry|sector|category|vertical)$/i,
   staffSize: /(employees|# employees|staff|headcount|company size|number of employees)/i,
@@ -45,9 +47,9 @@ const HEADER_HINTS: Record<Field, RegExp> = {
 
 export function guessMapping(headers: string[]): Partial<Record<Field, number>> {
   const map: Partial<Record<Field, number>> = {};
-  const order: Field[] = ["domain", "name", "city", "industry", "staffSize", "contactPhone", "phone", "contactEmail", "contactTitle", "contactName"];
+  const order: Field[] = ["externalId", "status", "domain", "name", "city", "industry", "staffSize", "contactPhone", "phone", "contactEmail", "contactTitle", "contactName"];
   for (const f of order) {
-    const idx = headers.findIndex((h, i) => HEADER_HINTS[f].test(h.trim()) && !Object.values(map).includes(i));
+    const idx = headers.findIndex((h, i) => HEADER_HINTS[f].test(h.trim().replace(/[_]+/g, " ")) && !Object.values(map).includes(i));
     if (idx >= 0) map[f] = idx;
   }
   return map;
@@ -57,6 +59,7 @@ export interface ImportResult {
   created: number;
   merged: number;
   contactsAdded: number;
+  candidates: number;
   skipped: { line: number; reason: string }[];
   accountIds: string[];
 }

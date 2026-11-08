@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-11-08 — v0.4.0 Find leads (LDITNW-27)
+
+- **Find leads** page: search by industry and city across OpenStreetMap and Wikidata (free), Google Places (free tier, then paid) and Apollo (company search, no credits).
+- Companies with their own website become accounts, deduplicated by domain, phone, Google place ID or Apollo ID, and scanned; social pages and marketplaces don't count as a website.
+- **Review list** for companies without a website: search the web, paste the site, add; or dismiss.
+- Weekly saved searches (Mondays 2:30 am IST via Vercel Cron) and a log of every search with its counts or error.
+- Account page: **Find decision makers (Apollo)**, free search; adding a person reveals the work email (uses Apollo credits).
+- CSV import: rows without a website go to the review list; a Company ID (CIN) column dedupes them; inactive companies (e.g. Strike Off in an MCA register file) are skipped.
+- `/api/discover/preview` (preview builds only) runs a source live without saving, for checking connectors.
+
 ## 2026-11-08 — Google sign-in on
 
 - Google OAuth client configured in Vercel (`AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`); production sign-in enabled (LDITNW-7).

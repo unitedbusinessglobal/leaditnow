@@ -35,22 +35,39 @@ export async function importRows(
   mapping: Partial<Record<Field, number>>,
   opts: { sourceName: string; ownerId?: string | null; hasHeader?: boolean },
 ): Promise<ImportResult> {
-  const res: ImportResult = { created: 0, merged: 0, contactsAdded: 0, skipped: [], accountIds: [] };
+  const res: ImportResult = { created: 0, merged: 0, contactsAdded: 0, candidates: 0, skipped: [], accountIds: [] };
   const body = opts.hasHeader === false ? rows : rows.slice(1);
   const seen = new Set<string>();
   for (let i = 0; i < body.length; i++) {
     const line = i + (opts.hasHeader === false ? 1 : 2);
     const r: Partial<Record<Field, string>> = {};
     for (const [f, idx] of Object.entries(mapping)) if (idx != null && idx >= 0) r[f as Field] = (body[i][idx] ?? "").trim();
+    if (r.status && !/^(active|live|activ)/i.test(r.status)) { res.skipped.push({ line, reason: `Status: ${r.status}` }); continue; }
     const domain = domainFrom(r);
     const phone = normalisePhone(r.phone || r.contactPhone);
-    if (!domain && !phone) { res.skipped.push({ line, reason: "No website domain or phone" }); continue; }
+    if (!domain && !phone && !r.name) { res.skipped.push({ line, reason: "No company name, website or phone" }); continue; }
 
     let account = domain ? await db.account.findUnique({ where: { orgId_domain: { orgId, domain } } }) : null;
     if (!account && phone) account = await db.account.findFirst({ where: { orgId, phone } });
     let created = false;
     if (!account) {
-      if (!domain) { res.skipped.push({ line, reason: "Phone only: add a website domain to create the account" }); continue; }
+      if (!domain) {
+        // No website yet: queue it for the team to find the site (register files, directories).
+        if (!r.name) { res.skipped.push({ line, reason: "Phone only, no company name" }); continue; }
+        const source = `csv:${opts.sourceName}`;
+        const externalId = r.externalId || `${r.name.toLowerCase()}|${phone ?? r.city ?? ""}`;
+        const existing = await db.leadCandidate.findUnique({ where: { orgId_source_externalId: { orgId, source, externalId } } });
+        if (!existing) {
+          await db.leadCandidate.create({
+            data: {
+              orgId, source, externalId, name: r.name, city: r.city || null, phone: r.phone || r.contactPhone || null,
+              industry: r.industry || null, staffSize: staff(r.staffSize), note: `Imported from ${opts.sourceName}${r.externalId ? ` (${r.externalId})` : ""}`,
+            },
+          });
+          res.candidates++;
+        }
+        continue;
+      }
       const up = await upsertAccount(db, orgId, {
         domain, name: r.name, city: r.city, industry: r.industry, staffSize: staff(r.staffSize), phone: r.phone || r.contactPhone,
         ownerId: opts.ownerId, source: `csv:${opts.sourceName}`, sourceNote: `Imported from ${opts.sourceName}`,

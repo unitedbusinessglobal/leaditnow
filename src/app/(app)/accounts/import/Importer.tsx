@@ -16,6 +16,8 @@ const FIELDS: { id: Field; label: string }[] = [
   { id: "contactTitle", label: "Contact title" },
   { id: "contactEmail", label: "Contact email" },
   { id: "contactPhone", label: "Contact phone" },
+  { id: "externalId", label: "Company ID (CIN)" },
+  { id: "status", label: "Company status" },
 ];
 
 export function Importer() {
@@ -39,7 +41,7 @@ export function Importer() {
 
   const headers = rows[0] ?? [];
   const mapped = FIELDS.filter((f) => mapping[f.id] != null);
-  const ready = mapping.domain != null || mapping.contactEmail != null;
+  const ready = mapping.domain != null || mapping.contactEmail != null || mapping.name != null;
 
   return (
     <div className="stack">
@@ -76,10 +78,11 @@ export function Importer() {
           </div>
           <p className="faint" style={{ margin: 0 }}>
             Rows merge into existing companies with the same domain, or the same phone number. Existing details are never overwritten; only gaps are filled.
+            Companies with no website go to the review list; companies whose status is not active (for example in a company register file) are skipped.
             The file name is stored as each record&apos;s source.
           </p>
           <label className="inline"><input type="checkbox" checked={scanNow} onChange={(e) => setScanNow(e.target.checked)} /> Scan the first 5 new companies now (the daily job scans the rest)</label>
-          {!ready && <p className="notice error">Map the website column, or a contact email with a company domain.</p>}
+          {!ready && <p className="notice error">Map the website, a contact email, or at least the company name.</p>}
           <div>
             <button
               className="btn btn-primary"
@@ -100,6 +103,7 @@ export function Importer() {
           <h2>Import finished</h2>
           <div className="grid4">
             <div><div className="kpi">{result.created}</div><div className="faint">new companies</div></div>
+            <div><div className="kpi">{result.candidates}</div><div className="faint">to review (no website)</div></div>
             <div><div className="kpi">{result.merged}</div><div className="faint">merged into existing</div></div>
             <div><div className="kpi">{result.contactsAdded}</div><div className="faint">contacts added</div></div>
             <div><div className="kpi">{result.skipped.length}</div><div className="faint">rows skipped</div></div>
@@ -112,6 +116,7 @@ export function Importer() {
           )}
           <div className="row">
             <Link className="btn btn-primary" href="/accounts?sort=newest">See accounts</Link>
+            {result.candidates > 0 && <Link className="btn" href="/leads/review">Open the review list</Link>}
             <button className="btn" onClick={() => { setRows([]); setResult(null); setFileName(""); }}>Import another file</button>
           </div>
         </div>

@@ -86,7 +86,8 @@ suite("domain on Postgres", () => {
     expect(res.created).toBe(1);
     expect(res.merged).toBe(1); // acme-tools already existed; phone match merges into murugan
     expect(res.contactsAdded).toBe(3);
-    expect(res.skipped).toEqual([{ line: 5, reason: "No website domain or phone" }]);
+    expect(res.skipped).toEqual([]);
+    expect(res.candidates).toBe(1); // "No data" has a name but no website: goes to the review list
     const m = await db.account.findUniqueOrThrow({ where: { orgId_domain: { orgId, domain: "murugantraders.in" } }, include: { contacts: true } });
     expect(m.staffSize).toBe(11);
     expect(m.source).toBe("csv:fair.csv");
@@ -95,6 +96,20 @@ suite("domain on Postgres", () => {
     const again = await importRows(db, orgId, rows, mapping, { sourceName: "fair.csv" });
     expect(again.created).toBe(0);
     expect(again.contactsAdded).toBe(0);
+    expect(again.candidates).toBe(0);
+    // A company register file: inactive companies skipped, no-website companies queued once by CIN.
+    const reg = parseCsv([
+      "CORPORATE_IDENTIFICATION_NUMBER,COMPANY_NAME,COMPANY_STATUS,REGISTERED_STATE",
+      "U72900TN2024PTC123456,Kaveri Tech Solutions Private Limited,Active,Tamil Nadu",
+      "U17110TN2019PTC654321,Old Mills Private Limited,Strike Off,Tamil Nadu",
+    ].join("\n"));
+    const regMap = guessMapping(reg[0]);
+    expect(regMap).toMatchObject({ externalId: 0, name: 1, status: 2 });
+    const regRes = await importRows(db, orgId, reg, regMap, { sourceName: "mca.csv" });
+    expect(regRes.candidates).toBe(1);
+    expect(regRes.skipped).toEqual([{ line: 3, reason: "Status: Strike Off" }]);
+    const c = await db.leadCandidate.findFirstOrThrow({ where: { orgId, externalId: "U72900TN2024PTC123456" } });
+    expect(c.name).toBe("Kaveri Tech Solutions Private Limited");
   });
 
   it("enforces exit rules stage by stage", async () => {

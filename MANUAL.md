@@ -45,6 +45,26 @@ A company can only exist once: adding the same domain again opens the existing a
 
 New companies are scanned by the nightly job (2 am IST). To scan some straight away, select **Scan next 8** on the Accounts page.
 
+### Finding new companies (Find leads)
+
+Founder, Director and Business Analysts can search for companies by industry and city:
+
+| Source | Cost | Best for |
+|---|---|---|
+| OpenStreetMap | Free | Shops, clinics, offices and workshops that list a website |
+| Wikidata | Free | Larger, well-known companies |
+| Google Places | Free for 1,000 searches a month, then about $35 per 1,000 | The widest coverage of local businesses |
+| Apollo | Company search uses no credits | Companies with 50+ staff, with decision makers |
+
+1. **Find leads**, pick the source, industry and city; add keywords to narrow it (for example "garment exporters").
+2. Tick **Also run this search every week** to keep finding new companies (Mondays, 2:30 am IST).
+3. Companies with their own website are added as accounts and scanned. Companies already in LeadItNow are not added twice.
+4. Companies with no website of their own (or only a Facebook or IndiaMART page) go to the **Review list**. Use **Search the web**, paste the company's website and select **Add**, or **Dismiss** it.
+
+**Company register files**: download the company master data file for Tamil Nadu from data.gov.in, save it as CSV and import it. Active companies go to the review list (they have no website in the file); struck-off and dissolved companies are skipped.
+
+**Decision makers (Apollo)**: on an account, select **Find decision makers (Apollo)** to see owners, directors and IT heads. **Add** puts the person in Contacts with their work email; each one uses Apollo credits.
+
 ## Reading an account
 
 - **Need** (High 40+, Medium 20-39, Low under 20, None): how strongly the public evidence suggests they need software or services. Each signal shows its evidence.

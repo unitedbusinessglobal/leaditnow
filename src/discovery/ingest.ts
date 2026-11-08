@@ -81,11 +81,17 @@ export function sourceReady(source: SourceId): string | null {
 export async function runSource(source: SourceId, i: SearchInput, f: Fetch = fetch): Promise<Found[]> {
   const missing = sourceReady(source);
   if (missing) throw new Error(missing);
-  switch (source) {
-    case "google-places": return searchPlaces(i, process.env.GOOGLE_PLACES_API_KEY!, f);
-    case "apollo": return searchApolloCompanies(i, process.env.APOLLO_API_KEY!, f);
-    case "osm": return searchOsm(i, f);
-    case "wikidata": return searchWikidata(i, f);
+  try {
+    switch (source) {
+      case "google-places": return await searchPlaces(i, process.env.GOOGLE_PLACES_API_KEY!, f);
+      case "apollo": return await searchApolloCompanies(i, process.env.APOLLO_API_KEY!, f);
+      case "osm": return await searchOsm(i, f);
+      case "wikidata": return await searchWikidata(i, f);
+    }
+  } catch (e) {
+    // Network failures ("fetch failed") don't say where; name the source.
+    const msg = (e as Error).message;
+    throw new Error(msg.startsWith(SOURCE_LABEL[source]) || msg.startsWith("Google Places") ? msg : `${SOURCE_LABEL[source]}: ${msg === "fetch failed" ? "could not be reached, try again later" : msg}`);
   }
 }
 
