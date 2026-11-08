@@ -73,8 +73,8 @@ export function describe(source: SourceId, i: SearchInput): string {
 }
 
 export function sourceReady(source: SourceId): string | null {
-  if (source === "google-places" && !process.env.GOOGLE_PLACES_API_KEY) return "Add a Google Maps Platform key (GOOGLE_PLACES_API_KEY) to use Google Places.";
-  if (source === "apollo" && !process.env.APOLLO_API_KEY) return "Add an Apollo API key (APOLLO_API_KEY) to use Apollo.";
+  if (source === "google-places" && !process.env.GOOGLE_PLACES_API_KEY) return "Google Places is not connected yet. The Founder will add the key; until then, use OpenStreetMap, Wikidata or a CSV import.";
+  if (source === "apollo" && !process.env.APOLLO_API_KEY) return "Apollo is not connected yet. The Founder will add the key; until then, use the free sources and enter company details by hand.";
   return null;
 }
 

@@ -1,3 +1,4 @@
+import { extractContacts, type FoundContact } from "./contacts";
 import { matchAbsent, matchPresent, rule, toMatch, type SignalMatch } from "./rules";
 
 export const USER_AGENT = "LeadItNowBot/0.1 (+https://ainformatiq.com; public-page check)";
@@ -111,7 +112,7 @@ export function matchPages(
 }
 
 /** Fetch the home page plus up to 10 same-site pages and match the rules. Public pages only. */
-export async function scanWebsite(domain: string): Promise<{ matches: SignalMatch[]; pagesScanned: string[] }> {
+export async function scanWebsite(domain: string): Promise<{ matches: SignalMatch[]; pagesScanned: string[]; contacts: FoundContact[] }> {
   let home = new URL(`https://${domain}/`);
   const robots = await fetchText(new URL("/robots.txt", home).href);
   const disallow = robots ? parseRobots(robots) : [];
@@ -136,5 +137,5 @@ export async function scanWebsite(domain: string): Promise<{ matches: SignalMatc
       if (html) pages.push({ url: link, html });
     }
   }
-  return { matches: matchPages(pages, { https }), pagesScanned: pages.map((p) => p.url) };
+  return { matches: matchPages(pages, { https }), pagesScanned: pages.map((p) => p.url), contacts: extractContacts(pages, domain) };
 }

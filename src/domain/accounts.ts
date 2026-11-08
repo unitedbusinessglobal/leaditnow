@@ -74,6 +74,7 @@ export async function saveScan(db: PrismaClient, account: Account, result: ScanR
     }),
     db.account.update({ where: { id: account.id }, data: { lastScannedAt: new Date() } }),
   ]);
+  await saveContactPoints(db, account, result.contacts ?? []);
   return recomputeScores(db, account.id);
 }
 
@@ -155,4 +156,16 @@ export async function recomputeScores(db: PrismaClient, accountId: string) {
       priority: priority(need, fit),
     },
   });
+}
+
+/** Keep published emails and phones from the website (new ones only); fill the office phone if empty. */
+export async function saveContactPoints(db: PrismaClient, account: Account, found: { kind: string; value: string; sourceUrl: string }[]) {
+  if (found.length === 0) return 0;
+  const res = await db.contactPoint.createMany({
+    data: found.map((c) => ({ orgId: account.orgId, accountId: account.id, kind: c.kind, value: c.value, sourceUrl: c.sourceUrl })),
+    skipDuplicates: true,
+  });
+  const phone = found.find((c) => c.kind === "phone");
+  if (!account.phone && phone) await db.account.update({ where: { id: account.id }, data: { phone: normalisePhone(phone.value) } });
+  return res.count;
 }

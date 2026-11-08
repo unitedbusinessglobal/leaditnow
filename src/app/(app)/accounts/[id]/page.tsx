@@ -12,7 +12,10 @@ import { STAGE_LABEL, SERVICE_LINES } from "@/domain/deals";
 import { completeTask } from "../../work/actions";
 import { searchApolloPeople, type ApolloPerson } from "@/discovery/apollo";
 import { revealContact } from "../../leads/actions";
-import { updateAccount, rescan, addSignal, removeSignal, addContact, optOutContact, createDeal } from "../actions";
+import { FinanceCard } from "@/components/FinanceCard";
+import { estimateItBudget, readSettings } from "@/domain/estimate";
+import { apolloReady } from "@/domain/enrich";
+import { addContactFromPoint, updateAccount, rescan, addSignal, removeSignal, addContact, optOutContact, createDeal } from "../actions";
 
 const ruleLabel = (id: string) => RULES.find((r) => r.id === id)?.label ?? id;
 
@@ -30,6 +33,7 @@ export default async function AccountPage({ params, searchParams }: {
       signals: { orderBy: [{ category: "asc" }, { weight: "desc" }] },
       deals: { orderBy: { updatedAt: "desc" } },
       scans: { orderBy: { startedAt: "desc" }, take: 1 },
+      contactPoints: { orderBy: [{ kind: "asc" }, { foundAt: "asc" }] },
       activities: { orderBy: { at: "desc" }, take: 30, include: { user: { select: { name: true } }, contact: { select: { name: true } } } },
     },
   });
@@ -52,6 +56,12 @@ export default async function AccountPage({ params, searchParams }: {
     catch (e) { peopleError = (e as Error).message; }
   }
   const known = new Set(a.contacts.map((c) => c.name.toLowerCase()));
+  const org = await db.organization.findUniqueOrThrow({ where: { id: user.orgId }, select: { settings: true } });
+  const estimate = estimateItBudget({
+    industry: a.industry, revenueInr: a.revenueInr, staffSize: a.staffSize, stack: a.stack,
+    signalIds: a.signals.map((x) => x.ruleId), contactTitles: a.contacts.map((c) => c.title),
+  }, readSettings(org.settings));
+  const knownValues = new Set(a.contacts.flatMap((c) => [c.email, c.phone].filter(Boolean) as string[]));
 
   return (
     <div className="stack">
@@ -130,6 +140,8 @@ export default async function AccountPage({ params, searchParams }: {
               </details>
             )}
           </section>
+
+          <FinanceCard a={a} estimate={estimate} edit={edit} canEnrich={can(user.role, "leads.find")} apollo={apolloReady()} canSettings={can(user.role, "users.manage")} />
 
           <section className="card">
             <div className="row" style={{ justifyContent: "space-between" }}><h2>Deals</h2></div>
@@ -264,6 +276,31 @@ export default async function AccountPage({ params, searchParams }: {
                 </form>
               </details>
             )}
+          </section>
+
+          <section className="card">
+            <h2>Published contact details</h2>
+            {a.contactPoints.length === 0 ? (
+              <p className="faint">None found on {a.domain}{a.lastScannedAt ? "" : " yet: the website has not been scanned"}.</p>
+            ) : (
+              <ul className="timeline">
+                {a.contactPoints.map((p) => (
+                  <li key={p.id} className="row" style={{ justifyContent: "space-between", gap: 6 }}>
+                    <span>
+                      {p.kind === "email" ? <a href={`mailto:${p.value}`}>{p.value}</a> : <a href={`tel:${p.value.replace(/\s/g, "")}`}>{p.value}</a>}
+                      <div className="faint"><a href={p.sourceUrl} target="_blank" rel="noreferrer">{p.sourceUrl.replace(/^https?:\/\//, "")}</a></div>
+                    </span>
+                    {edit && !knownValues.has(p.value) && (
+                      <form action={addContactFromPoint}>
+                        <input type="hidden" name="id" value={a.id} /><input type="hidden" name="pointId" value={p.id} />
+                        <button className="btn btn-sm">Add as contact</button>
+                      </form>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="faint" style={{ marginBottom: 0 }}>Emails and phone numbers the company publishes on its own website, found during the scan.</p>
           </section>
 
           <section className="card">

@@ -5,7 +5,9 @@ import { requireUser } from "@/lib/session";
 import { can } from "@/lib/roles";
 import { day } from "@/lib/format";
 import { Flash } from "@/components/Flash";
-import { scanPending } from "./actions";
+import { scanPending, enrichBatch } from "./actions";
+import { apolloReady } from "@/domain/enrich";
+import { inrShort } from "@/domain/estimate";
 import { SubmitButton } from "@/components/SubmitButton";
 
 export const maxDuration = 120;
@@ -30,7 +32,8 @@ export default async function Accounts({ searchParams }: { searchParams: Promise
   if (sp.hint) where.serviceHint = sp.hint;
   if (sp.owner === "me") where.ownerId = user.id;
   const page = Math.max(1, Number(sp.page) || 1);
-  const [accounts, total, hints, unscanned] = await Promise.all([
+  const apollo = apolloReady();
+  const [accounts, total, hints, unscanned, unenriched] = await Promise.all([
     db.account.findMany({
       where, orderBy: SORTS[sp.sort ?? "priority"] ?? SORTS.priority, take: PAGE, skip: (page - 1) * PAGE,
       include: { owner: { select: { name: true } }, _count: { select: { contacts: true, deals: true } } },
@@ -38,6 +41,7 @@ export default async function Accounts({ searchParams }: { searchParams: Promise
     db.account.count({ where }),
     db.account.findMany({ where: { orgId: user.orgId, serviceHint: { not: null } }, distinct: ["serviceHint"], select: { serviceHint: true } }),
     db.account.count({ where: { orgId: user.orgId, lastScannedAt: null } }),
+    db.account.count({ where: { orgId: user.orgId, enrichedAt: null } }),
   ]);
   const qs = (over: Partial<SP>) => {
     const p = new URLSearchParams(Object.entries({ ...sp, ok: undefined, error: undefined, ...over }).filter(([, v]) => v) as [string, string][]);
@@ -62,6 +66,14 @@ export default async function Accounts({ searchParams }: { searchParams: Promise
           <SubmitButton className="btn btn-sm" pending="Scanning…">Scan next 8</SubmitButton>
         </form>
       )}
+      {can(user.role, "leads.find") && unenriched > 0 && (apollo ? (
+        <form action={enrichBatch} className="notice row" style={{ justifyContent: "space-between" }}>
+          <span>{unenriched} {unenriched === 1 ? "account has" : "accounts have"} no size or revenue details from Apollo yet.</span>
+          <SubmitButton className="btn btn-sm" pending="Asking Apollo…">Enrich next 20</SubmitButton>
+        </form>
+      ) : (
+        <p className="faint" style={{ margin: 0 }}>Revenue and staff come from Apollo once it is connected. Until then, enter them on each account under Size and finance.</p>
+      ))}
       <form className="card row" method="get">
         <input name="q" defaultValue={sp.q} placeholder="Search name, domain or city" style={{ flex: 1, minWidth: 200 }} />
         <select name="need" defaultValue={sp.need ?? ""}>
@@ -88,7 +100,7 @@ export default async function Accounts({ searchParams }: { searchParams: Promise
       <div className="card" style={{ padding: 0, overflowX: "auto" }}>
         <table>
           <thead>
-            <tr><th>Company</th><th>Need</th><th className="num">Fit</th><th className="num">Priority</th><th>Lead with</th><th>City</th><th>Owner</th><th>Scanned</th></tr>
+            <tr><th>Company</th><th>Need</th><th className="num">Fit</th><th className="num">Priority</th><th>Lead with</th><th>Size</th><th>City</th><th>Owner</th><th>Scanned</th></tr>
           </thead>
           <tbody>
             {accounts.map((a) => (
@@ -101,13 +113,14 @@ export default async function Accounts({ searchParams }: { searchParams: Promise
                 <td className="num">{a.fitScore}</td>
                 <td className="num"><strong>{a.priority}</strong></td>
                 <td>{a.serviceHint ?? <span className="faint">—</span>}</td>
+                <td className="faint">{[a.staffSize ? `${a.staffSize} staff` : null, a.revenueInr ? inrShort(a.revenueInr) : null, a.listed ? `Listed${a.stockSymbol ? ` ${a.stockSymbol}` : ""}` : null].filter(Boolean).join(" · ") || "—"}</td>
                 <td>{a.city ?? <span className="faint">—</span>}</td>
                 <td>{a.owner?.name ?? <span className="faint">—</span>}</td>
                 <td className="faint">{a.lastScannedAt ? day(a.lastScannedAt) : "Waiting"}</td>
               </tr>
             ))}
             {accounts.length === 0 && (
-              <tr><td colSpan={8} className="muted" style={{ padding: 24 }}>No companies match. Add one by its website domain or import a CSV.</td></tr>
+              <tr><td colSpan={9} className="muted" style={{ padding: 24 }}>No companies match. Add one by its website domain or import a CSV.</td></tr>
             )}
           </tbody>
         </table>

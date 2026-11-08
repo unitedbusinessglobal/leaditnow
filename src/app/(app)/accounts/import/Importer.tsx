@@ -18,6 +18,10 @@ const FIELDS: { id: Field; label: string }[] = [
   { id: "contactPhone", label: "Contact phone" },
   { id: "externalId", label: "Company ID (CIN)" },
   { id: "status", label: "Company status" },
+  { id: "paidUpCapital", label: "Paid-up capital (₹)" },
+  { id: "listed", label: "Listed / unlisted" },
+  { id: "companyClass", label: "Company class" },
+  { id: "revenue", label: "Revenue (₹)" },
 ];
 
 export function Importer() {

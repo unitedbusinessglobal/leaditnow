@@ -87,3 +87,47 @@ export async function revealApolloPerson(id: string, apiKey: string, f: Fetch = 
   const email = p.email && !p.email.startsWith("email_not_unlocked") ? p.email : null;
   return { name: p.name || [p.first_name, p.last_name].filter(Boolean).join(" "), title: p.title ?? null, email, linkedin: p.linkedin_url ?? null };
 }
+
+export interface ApolloOrgDetails {
+  id: string | null;
+  employees: number | null;
+  annualRevenueUsd: number | null;
+  symbol: string | null;
+  exchange: string | null;
+  foundedYear: number | null;
+  technologies: string[];
+  phone: string | null;
+  industry: string | null;
+}
+
+/** Organization enrichment by domain (uses Apollo credits): size, revenue, listing, technologies. */
+export async function enrichApolloOrg(domain: string, apiKey: string, f: Fetch = fetch): Promise<ApolloOrgDetails | null> {
+  const res = await f(`${BASE}/organizations/enrich?domain=${encodeURIComponent(domain)}`, {
+    method: "GET",
+    headers: { "cache-control": "no-cache", "x-api-key": apiKey },
+  });
+  const json = (await res.json().catch(() => ({}))) as {
+    organization?: {
+      id?: string; estimated_num_employees?: number; annual_revenue?: number; organization_revenue?: number;
+      publicly_traded_symbol?: string; publicly_traded_exchange?: string; founded_year?: number;
+      technology_names?: string[]; current_technologies?: { name?: string }[]; industry?: string;
+      primary_phone?: { number?: string }; phone?: string;
+    };
+    error?: string; message?: string;
+  };
+  if (!res.ok) throw new Error(`Apollo: ${json.error ?? json.message ?? res.status}`);
+  const o = json.organization;
+  if (!o) return null;
+  const tech = o.technology_names?.length ? o.technology_names : (o.current_technologies ?? []).map((t) => t.name ?? "").filter(Boolean);
+  return {
+    id: o.id ?? null,
+    employees: o.estimated_num_employees ?? null,
+    annualRevenueUsd: o.annual_revenue ?? o.organization_revenue ?? null,
+    symbol: o.publicly_traded_symbol ?? null,
+    exchange: o.publicly_traded_exchange ?? null,
+    foundedYear: o.founded_year ?? null,
+    technologies: tech.slice(0, 40),
+    phone: o.primary_phone?.number ?? o.phone ?? null,
+    industry: o.industry ?? null,
+  };
+}

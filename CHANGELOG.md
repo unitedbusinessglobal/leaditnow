@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-11-08 — v0.6.0 enrichment (LDITNW-29)
+
+- **Published contact details**: every scan saves the business emails and phone numbers a company publishes on its own website, with the page they came from; one click adds one as a contact (source recorded for DPDP). The office phone is filled if empty.
+- **Size and finance** on each account: revenue, staff, listed or unlisted with stock symbol and a market-cap link, founded year, paid-up capital, company class and CIN, technologies. Filled from Apollo (**Enrich from Apollo**, and **Enrich next 20** on Accounts) or by hand; values typed by hand are never overwritten.
+- When Apollo or Google Places isn't connected, every place that uses them says so and points to the manual or free alternative.
+- **Estimated IT budget** band per account: revenue × the industry's IT-spend %, or staff × an amount per employee, raised when the company already uses several business tools, is hiring for IT, or has an IT lead. **Estimates** settings page (Founder and Director); all industries start at a placeholder 2%.
+- CSV import keeps CIN, paid-up capital, company class, listed flag and revenue columns, including on review-list items, which carry them to the account when added.
+- Accounts list shows a Size column.
+
 ## 2026-11-08 — v0.5.1 search feedback (LDITNW-27)
 
 - Search, Add and scan, and Scan next 8 buttons show progress while they run; searches no longer scan websites inline (the nightly job or "Scan next 8" does), so results come back faster.

@@ -9,6 +9,8 @@ export interface ScanResult {
   pagesScanned: string[];
   /** Raw MX hosts found, shown so a BA can check the email-provider call. */
   mx: string[];
+  /** Business emails and phones published on the website. */
+  contacts?: import("./contacts").FoundContact[];
   signals: SignalMatch[];
   need: NeedScore;
 }
@@ -32,6 +34,7 @@ export async function scanDomain(input: string): Promise<ScanResult> {
     scannedAt: new Date().toISOString(),
     pagesScanned: web.pagesScanned,
     mx: records.mx,
+    contacts: web.contacts,
     signals,
     need: needScore(signals),
   };

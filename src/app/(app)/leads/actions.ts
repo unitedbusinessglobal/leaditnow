@@ -72,6 +72,16 @@ export async function addCandidate(fd: FormData) {
     go("/leads/review", "error", (e as Error).message);
   }
   await db.leadCandidate.update({ where: { id }, data: { status: "ADDED", accountId: res!.account.id } });
+  const extra = (c!.extra ?? {}) as { cin?: string; paidUpCapitalInr?: number; listed?: boolean; companyClass?: string; revenueInr?: number };
+  if (res!.created && Object.keys(extra).length) {
+    await db.account.update({
+      where: { id: res!.account.id },
+      data: {
+        cin: extra.cin ?? null, paidUpCapitalInr: extra.paidUpCapitalInr ?? null, listed: extra.listed ?? null, companyClass: extra.companyClass ?? null,
+        ...(extra.revenueInr ? { revenueInr: extra.revenueInr, revenueSource: "manual" } : {}),
+      },
+    });
+  }
   if (c!.source === "google-places") await db.account.update({ where: { id: res!.account.id }, data: { placeId: c!.externalId } });
   await scanAndSave(db, res!.account).then((r) => r ?? recomputeScores(db, res!.account.id));
   await audit(user.orgId, user.id, "LeadCandidate", id, "add", { accountId: res!.account.id });

@@ -83,6 +83,12 @@ Add what you know that the website cannot show: **Add a signal you know about** 
 
 Record how you got every contact. If someone asks not to be contacted, select **Mark opted out** at once: they disappear from the contact lists for logging and must not be contacted again. Only tick **Agreed to WhatsApp messages** when they have said yes.
 
+### Contact details, size and IT budget
+
+- **Published contact details**: emails and phone numbers the company lists on its own website, found when it is scanned. Select **Add as contact** to keep one; the page it came from is recorded.
+- **Size and finance**: revenue, staff, listed or unlisted (with a link to the share price and market cap), founded year, paid-up capital and CIN. **Enrich from Apollo** fills them automatically once Apollo is connected; until then, use **Enter or correct by hand**. What you type is never overwritten by Apollo.
+- **Estimated IT budget**: a yearly band worked out from revenue and the industry's IT-spend percentage (Founder and Director set these under **Estimates**). It is an estimate to size the opportunity, not a figure to quote to the client.
+
 ## Working a deal
 
 Start a deal from the account page (**Start a deal**): pick the service line and an estimated value. Leave **Originated by the India team** ticked for deals the Chennai team found; it decides the revenue share.

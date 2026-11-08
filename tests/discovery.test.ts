@@ -157,7 +157,7 @@ const url = process.env.TEST_DATABASE_URL;
     delete process.env.GOOGLE_PLACES_API_KEY;
     const { run, result } = await runDiscovery(db, orgId, "google-places", { industry: "Manufacturing", city: "Salem" }, {});
     expect(result).toBeNull();
-    expect(run.error).toMatch(/GOOGLE_PLACES_API_KEY/);
+    expect(run.error).toMatch(/Google Places is not connected yet/);
     process.env.GOOGLE_PLACES_API_KEY = saved;
     const { f } = stub([{ elements: [{ type: "node", id: 5, tags: { name: "Salem Steel", website: "https://salemsteel.in" } }] }]);
     const ok = await runDiscovery(db, orgId, "osm", { industry: "Manufacturing", city: "Salem" }, { fetchImpl: f });

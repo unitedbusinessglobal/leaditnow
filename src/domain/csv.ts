@@ -16,6 +16,35 @@ function domainFrom(row: Partial<Record<Field, string>>): string | null {
   return null;
 }
 
+/** Rupee amounts: "1,00,000", "₹ 5 lakh", "2.5 crore", "500000.00". */
+export function rupees(v?: string): number | null {
+  if (!v?.trim()) return null;
+  const s = v.toLowerCase().replace(/[₹,\s]|rs\.?|inr/g, "");
+  const m = s.match(/^(\d+(?:\.\d+)?)(lakh|lac|lakhs|crore|cr|crores)?$/);
+  if (!m) return null;
+  const n = Number(m[1]) * (m[2]?.startsWith("l") ? 1e5 : m[2]?.startsWith("c") ? 1e7 : 1);
+  return Number.isFinite(n) ? n : null;
+}
+
+function yesListed(v?: string): boolean | null {
+  if (!v?.trim()) return null;
+  if (/^(unlisted|no|n|false)$/i.test(v.trim())) return false;
+  if (/^(listed|yes|y|true)$/i.test(v.trim())) return true;
+  return null;
+}
+
+/** Register and finance columns, kept on the account (or carried by a review item). */
+function registerDetails(r: Partial<Record<Field, string>>) {
+  const d = {
+    cin: r.externalId && /^[ULF]\d{5}[A-Z]{2}\d{4}[A-Z]{3}\d{6}$/i.test(r.externalId) ? r.externalId.toUpperCase() : null,
+    paidUpCapitalInr: rupees(r.paidUpCapital),
+    listed: yesListed(r.listed),
+    companyClass: r.companyClass?.trim() || null,
+    revenueInr: rupees(r.revenue),
+  };
+  return Object.values(d).some((x) => x != null) ? d : null;
+}
+
 function staff(v?: string): number | null {
   if (!v) return null;
   const nums = v.replace(/,/g, "").match(/\d+/g);
@@ -60,6 +89,7 @@ export async function importRows(
         if (!existing) {
           await db.leadCandidate.create({
             data: {
+              extra: registerDetails(r) ?? undefined,
               orgId, source, externalId, name: r.name, city: r.city || null, phone: r.phone || r.contactPhone || null,
               industry: r.industry || null, staffSize: staff(r.staffSize), note: `Imported from ${opts.sourceName}${r.externalId ? ` (${r.externalId})` : ""}`,
             },
@@ -74,6 +104,16 @@ export async function importRows(
       });
       account = up.account;
       created = up.created;
+      const reg = registerDetails(r);
+      if (reg) {
+        account = await db.account.update({
+          where: { id: account.id },
+          data: {
+            cin: reg.cin, paidUpCapitalInr: reg.paidUpCapitalInr, listed: reg.listed, companyClass: reg.companyClass,
+            ...(reg.revenueInr ? { revenueInr: reg.revenueInr, revenueSource: "manual" } : {}),
+          },
+        });
+      }
     } else {
       // Fill gaps only; never overwrite what the team already entered.
       await db.account.update({

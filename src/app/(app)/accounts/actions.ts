@@ -7,7 +7,8 @@ import { requireCan } from "@/lib/session";
 import { audit } from "@/lib/audit";
 import { str, intOrNull } from "@/lib/format";
 import { upsertAccount, scanAndSave, addManualSignal, recomputeScores } from "@/domain/accounts";
-import { importRows, type Field } from "@/domain/csv";
+import { importRows, rupees, type Field } from "@/domain/csv";
+import { enrichAccount, apolloReady, APOLLO_MISSING } from "@/domain/enrich";
 import { SERVICE_LINES } from "@/domain/deals";
 
 const back = (id: string, msg: string, kind: "ok" | "error" = "ok") =>
@@ -176,4 +177,80 @@ export async function scanPending() {
   await Promise.all(pending.map((a) => scanAndSave(db, a)));
   const left = await db.account.count({ where: { orgId: user.orgId, lastScannedAt: null } });
   redirect(`/accounts?ok=${encodeURIComponent(`Scanned ${pending.length}. ${left} still waiting.`)}`);
+}
+
+export async function updateFinance(fd: FormData) {
+  const user = await requireCan("accounts.edit");
+  const id = str(fd.get("id"));
+  const a = await ownAccount(user.orgId, id);
+  const revenue = rupees(str(fd.get("revenue")));
+  const listed = str(fd.get("listed"));
+  const year = intOrNull(fd.get("foundedYear"));
+  await db.account.update({
+    where: { id },
+    data: {
+      revenueInr: revenue,
+      revenueSource: revenue == null ? null : revenue === a.revenueInr ? a.revenueSource : "manual",
+      staffSize: intOrNull(fd.get("staffSize")),
+      listed: listed === "yes" ? true : listed === "no" ? false : null,
+      stockSymbol: str(fd.get("stockSymbol")).toUpperCase() || null,
+      stockExchange: str(fd.get("stockExchange")).toUpperCase() || null,
+      foundedYear: year && year > 1800 && year <= new Date().getFullYear() ? year : null,
+      paidUpCapitalInr: rupees(str(fd.get("paidUpCapital"))),
+      cin: str(fd.get("cin")).toUpperCase() || null,
+      companyClass: str(fd.get("companyClass")) || null,
+    },
+  });
+  await recomputeScores(db, id);
+  await audit(user.orgId, user.id, "Account", id, "finance");
+  back(id, "Size and finance saved.");
+}
+
+export async function enrichOne(fd: FormData) {
+  const user = await requireCan("leads.find");
+  const a = await ownAccount(user.orgId, str(fd.get("id")));
+  let status: Awaited<ReturnType<typeof enrichAccount>>;
+  try {
+    status = await enrichAccount(db, a);
+  } catch (e) {
+    back(a.id, (e as Error).message, "error");
+  }
+  if (status! === "not-connected") back(a.id, APOLLO_MISSING, "error");
+  await recomputeScores(db, a.id);
+  await audit(user.orgId, user.id, "Account", a.id, "apollo-enrich", { status: status! });
+  back(a.id, status! === "done" ? "Updated from Apollo." : `Apollo has no company record for ${a.domain}. Enter what you know by hand.`);
+}
+
+export async function enrichBatch() {
+  const user = await requireCan("leads.find");
+  if (!apolloReady()) redirect(`/accounts?error=${encodeURIComponent(APOLLO_MISSING)}`);
+  const batch = await db.account.findMany({ where: { orgId: user.orgId, enrichedAt: null }, orderBy: [{ priority: "desc" }], take: 20 });
+  let done = 0, missing = 0, failed = 0;
+  for (const a of batch) {
+    try {
+      const s = await enrichAccount(db, a);
+      if (s === "done") { done++; await recomputeScores(db, a.id); } else missing++;
+    } catch { failed++; }
+  }
+  const left = await db.account.count({ where: { orgId: user.orgId, enrichedAt: null } });
+  redirect(`/accounts?ok=${encodeURIComponent(`Enriched ${done}; Apollo had no record for ${missing}${failed ? `; ${failed} failed` : ""}. ${left} not yet enriched.`)}`);
+}
+
+export async function addContactFromPoint(fd: FormData) {
+  const user = await requireCan("accounts.edit");
+  const id = str(fd.get("id"));
+  await ownAccount(user.orgId, id);
+  const p = await db.contactPoint.findFirst({ where: { id: str(fd.get("pointId")), accountId: id } });
+  if (!p) back(id, "Not found.", "error");
+  const local = p!.kind === "email" ? p!.value.split("@")[0] : "";
+  const name = str(fd.get("name")) || (p!.kind === "email" ? `${local.charAt(0).toUpperCase()}${local.slice(1)} (general)` : "Office");
+  await db.contact.create({
+    data: {
+      orgId: user.orgId, accountId: id, name, title: str(fd.get("title")) || null,
+      email: p!.kind === "email" ? p!.value : null, phone: p!.kind === "phone" ? p!.value : null,
+      consentSource: `Published on the company website: ${p!.sourceUrl}`,
+    },
+  });
+  await recomputeScores(db, id);
+  back(id, "Added to contacts.");
 }
