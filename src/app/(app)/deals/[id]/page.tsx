@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/session";
+import { actorFor } from "@/domain/assign";
 import { can, DISCOUNT_LIMIT_PCT } from "@/lib/roles";
 import { day, inr, toDateInput, when } from "@/lib/format";
 import { Flash } from "@/components/Flash";
@@ -42,6 +43,7 @@ export default async function DealPage({ params, searchParams }: {
   const contract = can(user.role, "deals.contract");
   const money = can(user.role, "invoices.edit");
   const backTo = `/deals/${deal.id}`;
+  const reassign = edit && (can(user.role, "accounts.assign") || (!!deal.account.teamId && (await actorFor(db, user)).leadOf.includes(deal.account.teamId)));
 
   return (
     <div className="stack">
@@ -143,7 +145,7 @@ export default async function DealPage({ params, searchParams }: {
               </label>
               <label>Live in production on<input name="liveAt" type="date" defaultValue={toDateInput(deal.liveAt)} disabled={!edit} /></label>
               <label>Owner
-                <select name="ownerId" defaultValue={deal.ownerId ?? ""} disabled={!edit}>
+                <select name="ownerId" defaultValue={deal.ownerId ?? ""} disabled={!reassign}>
                   <option value="">—</option>
                   {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
                 </select>

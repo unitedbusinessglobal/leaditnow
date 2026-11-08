@@ -13,6 +13,9 @@ import { completeTask } from "../../work/actions";
 import { searchApolloPeople, type ApolloPerson } from "@/discovery/apollo";
 import { revealContact } from "../../leads/actions";
 import { FinanceCard } from "@/components/FinanceCard";
+import { AssignControls } from "@/components/AssignControls";
+import { actorFor, assignOptions, loadTeams, canGiveTask } from "@/domain/assign";
+import { addTask } from "../../work/actions";
 import { estimateItBudget, readSettings } from "@/domain/estimate";
 import { apolloReady } from "@/domain/enrich";
 import { addContactFromPoint, updateAccount, rescan, addSignal, removeSignal, addContact, optOutContact, createDeal } from "../actions";
@@ -29,6 +32,7 @@ export default async function AccountPage({ params, searchParams }: {
     where: { id, orgId: user.orgId },
     include: {
       owner: { select: { name: true } },
+      team: { select: { id: true, name: true, lead: { select: { name: true } } } },
       contacts: { orderBy: { createdAt: "asc" } },
       signals: { orderBy: [{ category: "asc" }, { weight: "desc" }] },
       deals: { orderBy: { updatedAt: "desc" } },
@@ -38,10 +42,17 @@ export default async function AccountPage({ params, searchParams }: {
     },
   });
   if (!a) notFound();
-  const [users, tasks] = await Promise.all([
-    db.user.findMany({ where: { orgId: user.orgId, active: true }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
-    db.task.findMany({ where: { orgId: user.orgId, done: false, OR: [{ entityId: a.id }, { entityId: { in: a.deals.map((d) => d.id) } }] }, orderBy: { dueAt: "asc" }, include: { owner: { select: { name: true } } } }),
+  const [users, tasks, { teams, outsiders }, actor] = await Promise.all([
+    db.user.findMany({ where: { orgId: user.orgId, active: true }, orderBy: { name: "asc" }, select: { id: true, name: true, teamId: true, active: true, role: true } }),
+    db.task.findMany({ where: { orgId: user.orgId, done: false, OR: [{ entityId: a.id }, { entityId: { in: a.deals.map((d) => d.id) } }] }, orderBy: { dueAt: "asc" }, include: { owner: { select: { name: true } }, assignedBy: { select: { name: true } } } }),
+    loadTeams(db, user.orgId),
+    actorFor(db, user),
   ]);
+  const assignGroups = assignOptions(actor, teams, outsiders, a.teamId);
+  const inTeam = !!a.teamId && user.teamId === a.teamId;
+  const canPickUp = inTeam && !a.ownerId;
+  const canRelease = inTeam && a.ownerId === user.id;
+  const taskPeople = users.filter((u) => canGiveTask(actor, u));
   const edit = can(user.role, "accounts.edit");
   const need = a.signals.filter((s) => s.category === "NEED");
   const contactable = a.contacts.filter((c) => !c.optedOutAt);
@@ -71,7 +82,7 @@ export default async function AccountPage({ params, searchParams }: {
           <h1>{a.name}</h1>
           <div className="muted">
             <a href={`https://${a.domain}`} target="_blank" rel="noreferrer">{a.domain}</a>
-            {a.city && ` · ${a.city}`}{a.industry && ` · ${a.industry}`}{a.owner && ` · Owner: ${a.owner.name}`}
+            {a.city && ` · ${a.city}`}{a.industry && ` · ${a.industry}`}{a.owner ? ` · Owner: ${a.owner.name}` : a.team ? ` · ${a.team.name} queue` : " · Unassigned"}
           </div>
         </div>
         <div className="row">
@@ -194,12 +205,23 @@ export default async function AccountPage({ params, searchParams }: {
 
         <div className="stack">
           <section className="card">
+            <h2>Who works this</h2>
+            <p style={{ marginTop: 0 }}>
+              {a.owner ? <><strong>{a.owner.name}</strong>{a.team && <span className="muted"> · {a.team.name}</span>}</>
+                : a.team ? <>Waiting in the <strong>{a.team.name}</strong> queue</>
+                : <>Unassigned: <span className="muted">a new lead waiting for the Sales Lead to assign it</span></>}
+              {a.assignedAt && <span className="faint"> · since {day(a.assignedAt)}</span>}
+            </p>
+            <AssignControls accountId={a.id} backTo={backTo} groups={assignGroups} canPickUp={canPickUp} canRelease={canRelease} teamName={a.team?.name} />
+          </section>
+
+          <section className="card">
             <h2>Open tasks</h2>
             {tasks.length === 0 && <p className="faint">None.</p>}
             <ul className="timeline">
               {tasks.map((t) => (
                 <li key={t.id} className="row" style={{ justifyContent: "space-between" }}>
-                  <span>{t.title}<div className="faint">{day(t.dueAt)} · {t.owner.name}</div></span>
+                  <span>{t.title}<div className="faint">{day(t.dueAt)} · {t.owner.name}{t.assignedBy && ` · from ${t.assignedBy.name}`}</div></span>
                   {t.ownerId === user.id && (
                     <form action={completeTask}>
                       <input type="hidden" name="taskId" value={t.id} /><input type="hidden" name="backTo" value={backTo} />
@@ -209,6 +231,27 @@ export default async function AccountPage({ params, searchParams }: {
                 </li>
               ))}
             </ul>
+            {can(user.role, "activities.log") && (
+              <details style={{ marginTop: 8 }}>
+                <summary>Add a task</summary>
+                <form action={addTask} className="form" style={{ marginTop: 10 }}>
+                  <input type="hidden" name="entity" value="Account" /><input type="hidden" name="entityId" value={a.id} />
+                  <input type="hidden" name="backTo" value={backTo} />
+                  <label>Task<input name="title" required placeholder="Call the MD, send the brochure…" /></label>
+                  <div className="row">
+                    <label>By<input name="dueAt" type="date" required /></label>
+                    {taskPeople.length > 1 && (
+                      <label>For
+                        <select name="ownerId" defaultValue={user.id}>
+                          {taskPeople.map((u) => <option key={u.id} value={u.id}>{u.id === user.id ? "Me" : u.name}</option>)}
+                        </select>
+                      </label>
+                    )}
+                  </div>
+                  <div><button className="btn btn-sm">Add task</button></div>
+                </form>
+              </details>
+            )}
           </section>
 
           <section className="card">
@@ -313,12 +356,6 @@ export default async function AccountPage({ params, searchParams }: {
               <label>Staff (approx.)<input name="staffSize" defaultValue={a.staffSize ?? ""} inputMode="numeric" disabled={!edit} /></label>
               <label>Office phone<input name="phone" defaultValue={a.phone ?? ""} disabled={!edit} /></label>
               <label>GSTIN<input name="gstin" defaultValue={a.gstin ?? ""} disabled={!edit} /></label>
-              <label>Owner
-                <select name="ownerId" defaultValue={a.ownerId ?? ""} disabled={!edit}>
-                  <option value="">—</option>
-                  {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-                </select>
-              </label>
               <label>Notes<textarea name="notes" defaultValue={a.notes ?? ""} disabled={!edit} /></label>
               <p className="faint" style={{ margin: 0 }}>Source: {a.source}{a.sourceNote ? ` — ${a.sourceNote}` : ""} · added {day(a.createdAt)}</p>
               {edit && <div><button className="btn btn-sm">Save details</button></div>}

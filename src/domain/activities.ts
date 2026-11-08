@@ -1,6 +1,6 @@
 import type { PrismaClient, ActivityType } from "@prisma/client";
 
-export const CALL_OUTCOMES = ["Connected", "No answer", "Call back later", "Meeting booked", "Not interested", "Wrong number"];
+export const CALL_OUTCOMES = ["Connected", "Replied", "No answer", "Call back later", "Meeting booked", "Not interested", "Wrong number"];
 
 export interface LogInput {
   orgId: string;

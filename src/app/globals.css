@@ -187,3 +187,15 @@ details summary { cursor: pointer; color: var(--brand); }
 }
 .spin { display: inline-block; width: 12px; height: 12px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .7s linear infinite; vertical-align: -1px; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* Progress banner across the top of every app page */
+.progress-strip { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; margin-bottom: 20px; box-shadow: var(--shadow); }
+.progress-strip a { background: var(--card); padding: 10px 12px; color: var(--ink); text-decoration: none; display: block; min-width: 0; }
+.progress-strip a:hover { background: var(--hover); }
+.progress-strip a.on { box-shadow: inset 0 -3px 0 var(--brand); }
+.progress-strip .n { font-size: 22px; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.progress-strip .l { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.progress-strip .pool .n { color: var(--warn); }
+.progress-strip .won .n { color: var(--good); }
+@media (max-width: 900px) { .progress-strip { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .progress-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

@@ -3,6 +3,7 @@ import type { Role } from "@prisma/client";
 export const ROLE_LABEL: Record<Role, string> = {
   FOUNDER: "Founder",
   DIRECTOR: "Director, Marketing and Sales",
+  SALES_LEAD: "Sales Lead",
   BA: "Business Analyst",
   SALES: "Inside Sales",
   INTERN: "Intern",
@@ -20,7 +21,9 @@ export type Action =
   | "deals.edit"
   | "deals.contract"
   | "activities.log"
-  | "leads.find";
+  | "leads.find"
+  | "accounts.assign"
+  | "teams.manage";
 
 const MATRIX: Record<Action, Role[]> = {
   "users.manage": ["FOUNDER", "DIRECTOR"],
@@ -28,15 +31,19 @@ const MATRIX: Record<Action, Role[]> = {
   "approvals.decide": ["FOUNDER"],
   "revenue.view": ["FOUNDER", "DIRECTOR"],
   "invoices.edit": ["FOUNDER", "DIRECTOR"],
-  "dashboard.view": ["FOUNDER", "DIRECTOR"],
-  "accounts.edit": ["FOUNDER", "DIRECTOR", "BA", "SALES"],
-  "accounts.import": ["FOUNDER", "DIRECTOR", "BA"],
-  "deals.edit": ["FOUNDER", "DIRECTOR", "BA", "SALES"],
+  "dashboard.view": ["FOUNDER", "DIRECTOR", "SALES_LEAD"],
+  "accounts.edit": ["FOUNDER", "DIRECTOR", "SALES_LEAD", "BA", "SALES"],
+  "accounts.import": ["FOUNDER", "DIRECTOR", "SALES_LEAD", "BA"],
+  "deals.edit": ["FOUNDER", "DIRECTOR", "SALES_LEAD", "BA", "SALES"],
   // Moving a deal into contract stages (MOU, MSA) or recording signed documents.
   "deals.contract": ["FOUNDER", "DIRECTOR"],
-  "activities.log": ["FOUNDER", "DIRECTOR", "BA", "SALES", "INTERN"],
+  "activities.log": ["FOUNDER", "DIRECTOR", "SALES_LEAD", "BA", "SALES", "INTERN"],
   // Running lead searches and revealing Apollo contacts (which uses paid credits).
-  "leads.find": ["FOUNDER", "DIRECTOR", "BA"],
+  "leads.find": ["FOUNDER", "DIRECTOR", "SALES_LEAD", "BA"],
+  // Assigning any account to any team or person, and taking it back.
+  "accounts.assign": ["FOUNDER", "DIRECTOR", "SALES_LEAD"],
+  // Creating teams, naming their lead and choosing members.
+  "teams.manage": ["FOUNDER", "DIRECTOR", "SALES_LEAD"],
 };
 
 export function can(role: Role, action: Action): boolean {

@@ -31,7 +31,9 @@ export async function createAccount(fd: FormData) {
       industry: str(fd.get("industry")),
       staffSize: intOrNull(fd.get("staffSize")),
       phone: str(fd.get("phone")),
+      // Someone who adds a company by hand works it themselves.
       ownerId: user.id,
+      teamId: user.teamId,
       source: "manual",
       sourceNote: str(fd.get("sourceNote")) || `Added by ${user.name}`,
     });
@@ -60,7 +62,6 @@ export async function updateAccount(fd: FormData) {
   const user = await requireCan("accounts.edit");
   const id = str(fd.get("id"));
   await ownAccount(user.orgId, id);
-  const owner = str(fd.get("ownerId"));
   await db.account.update({
     where: { id },
     data: {
@@ -71,7 +72,6 @@ export async function updateAccount(fd: FormData) {
       phone: str(fd.get("phone")) || null,
       gstin: str(fd.get("gstin")).toUpperCase() || null,
       notes: str(fd.get("notes")) || null,
-      ownerId: owner || null,
     },
   });
   await recomputeScores(db, id);
@@ -159,7 +159,7 @@ export async function runImport(input: {
 }) {
   const user = await requireCan("accounts.import");
   if (input.rows.length > 5001) throw new Error("Import up to 5,000 rows at a time.");
-  const res = await importRows(db, user.orgId, input.rows, input.mapping, { sourceName: input.fileName, ownerId: user.id });
+  const res = await importRows(db, user.orgId, input.rows, input.mapping, { sourceName: input.fileName, ownerId: null });
   for (const accountId of res.accountIds) await recomputeScores(db, accountId);
   await audit(user.orgId, user.id, "Import", input.fileName, "csv", { created: res.created, merged: res.merged, skipped: res.skipped.length });
   // Scan a handful now; the daily job scans the rest.

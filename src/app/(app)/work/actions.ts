@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { requireCan } from "@/lib/session";
 import { str, fromDateInput } from "@/lib/format";
 import { logActivity } from "@/domain/activities";
+import { actorFor, canGiveTask } from "@/domain/assign";
 
 /** Log a call, meeting, note, email or WhatsApp touch; calls and meetings must end with a dated next step. */
 export async function logTouch(fd: FormData) {
@@ -50,8 +51,15 @@ export async function addTask(fd: FormData) {
   const backTo = str(fd.get("backTo")) || "/today";
   const sep = backTo.includes("?") ? "&" : "?";
   if (!title || !dueAt) redirect(`${backTo}${sep}error=${encodeURIComponent("Add the task and its date.")}`);
+  // A task can be given to a team member by their team lead, or to anyone by the Founder, Director or Sales Lead.
+  const ownerId = str(fd.get("ownerId")) || user.id;
+  const assignee = await db.user.findFirst({ where: { id: ownerId, orgId: user.orgId } });
+  if (!assignee || !canGiveTask(await actorFor(db, user), assignee)) redirect(`${backTo}${sep}error=${encodeURIComponent("You can only give tasks to members of a team you lead.")}`);
   await db.task.create({
-    data: { orgId: user.orgId, ownerId: user.id, title, dueAt: dueAt!, entity: str(fd.get("entity")) || null, entityId: str(fd.get("entityId")) || null },
+    data: {
+      orgId: user.orgId, ownerId, assignedById: ownerId === user.id ? null : user.id, title, dueAt: dueAt!,
+      entity: str(fd.get("entity")) || null, entityId: str(fd.get("entityId")) || null,
+    },
   });
-  redirect(`${backTo}${sep}ok=${encodeURIComponent("Task added.")}`);
+  redirect(`${backTo}${sep}ok=${encodeURIComponent(ownerId === user.id ? "Task added." : `Task given to ${assignee!.name}.`)}`);
 }

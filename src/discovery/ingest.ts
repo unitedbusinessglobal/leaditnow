@@ -103,7 +103,8 @@ export async function runDiscovery(
   const query = describe(source, i);
   try {
     const found = await runSource(source, i, opts.fetchImpl ?? fetch);
-    const r = await ingest(db, orgId, found, { ownerId: opts.userId ?? null, query });
+    // Found companies start unassigned; the Sales Lead assigns them to a team.
+    const r = await ingest(db, orgId, found, { ownerId: null, query });
     const run = await db.discoveryRun.create({
       data: { orgId, source, query, found: r.found, added: r.added, existing: r.existing, candidates: r.candidates, savedSearchId: opts.savedSearchId ?? null, createdById: opts.userId ?? null },
     });

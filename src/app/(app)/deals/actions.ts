@@ -1,7 +1,9 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import type { DealStage, DocumentKind, ApprovalKind } from "@prisma/client";
+import type { DealStage, DocumentKind, ApprovalKind, Role } from "@prisma/client";
+import { can } from "@/lib/roles";
+import { actorFor } from "@/domain/assign";
 import { db } from "@/lib/db";
 import { requireCan, requireUser } from "@/lib/session";
 import { audit } from "@/lib/audit";
@@ -12,6 +14,11 @@ import { setDiscount, requestApproval } from "@/domain/approvals";
 const back = (id: string, msg: string, kind: "ok" | "error" = "ok"): never =>
   redirect(`/deals/${id}?${kind}=${encodeURIComponent(msg)}`);
 
+async function canReassignDeal(user: { id: string; role: Role; teamId: string | null }, teamId: string | null) {
+  if (can(user.role, "accounts.assign")) return true;
+  return !!teamId && (await actorFor(db, user)).leadOf.includes(teamId);
+}
+
 async function ownDeal(orgId: string, id: string) {
   const d = await db.deal.findFirst({ where: { id, orgId } });
   if (!d) throw new Error("Deal not found");
@@ -21,7 +28,15 @@ async function ownDeal(orgId: string, id: string) {
 export async function updateDeal(fd: FormData) {
   const user = await requireCan("deals.edit");
   const id = str(fd.get("id"));
-  await ownDeal(user.orgId, id);
+  const current = await ownDeal(user.orgId, id);
+  // Only the Founder, Director, Sales Lead or the account's team lead can change who owns a deal.
+  const wanted = str(fd.get("ownerId")) || null;
+  let ownerId = current.ownerId;
+  if (fd.has("ownerId") && wanted !== current.ownerId) {
+    const account = await db.account.findUniqueOrThrow({ where: { id: current.accountId }, select: { teamId: true } });
+    if (!(await canReassignDeal(user, account.teamId))) back(id, "Only the Sales Lead, Director, Founder or the team lead can change the deal owner.", "error");
+    ownerId = wanted;
+  }
   const serviceLine = str(fd.get("serviceLine"));
   await db.deal.update({
     where: { id },
@@ -34,7 +49,7 @@ export async function updateDeal(fd: FormData) {
       championContactId: str(fd.get("championContactId")) || null,
       liveAt: fromDateInput(fd.get("liveAt")),
       indiaOriginated: fd.get("indiaOriginated") === "on",
-      ownerId: str(fd.get("ownerId")) || null,
+      ownerId,
     },
   });
   await audit(user.orgId, user.id, "Deal", id, "update");

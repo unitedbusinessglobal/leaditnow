@@ -5,22 +5,30 @@ import { day, when, todayIst, inr } from "@/lib/format";
 import { Flash } from "@/components/Flash";
 import { STAGE_LABEL, isStuck } from "@/domain/deals";
 import { completeTask, addTask } from "../work/actions";
+import { assignMany } from "../accounts/assign-actions";
+import { can } from "@/lib/roles";
+import { stageWhere } from "@/domain/assign";
 
 export default async function MyDay({ searchParams }: { searchParams: Promise<{ ok?: string; error?: string }> }) {
   const user = await requireUser();
   const sp = await searchParams;
   const { start, end } = todayIst();
-  const [tasks, myDeals, topAccounts, todays] = await Promise.all([
-    db.task.findMany({ where: { orgId: user.orgId, ownerId: user.id, done: false, dueAt: { lt: end } }, orderBy: { dueAt: "asc" }, take: 50 }),
+  const [tasks, myDeals, topAccounts, todays, queue, pool] = await Promise.all([
+    db.task.findMany({ where: { orgId: user.orgId, ownerId: user.id, done: false, dueAt: { lt: end } }, orderBy: { dueAt: "asc" }, take: 50, include: { assignedBy: { select: { name: true } } } }),
     db.deal.findMany({
       where: { orgId: user.orgId, ownerId: user.id, stage: { notIn: ["LOST", "RENEW_EXPAND"] } },
       include: { account: { select: { name: true } } }, orderBy: { stageChangedAt: "asc" },
     }),
     db.account.findMany({
-      where: { orgId: user.orgId, OR: [{ ownerId: user.id }, { ownerId: null }], deals: { none: {} } },
+      where: { orgId: user.orgId, ownerId: user.id, deals: { none: {} } },
       orderBy: [{ priority: "desc" }], take: 8,
     }),
     db.activity.count({ where: { orgId: user.orgId, userId: user.id, at: { gte: start, lt: end }, type: { not: "STAGE_CHANGE" } } }),
+    // Accounts waiting in my team's queue for someone to pick them up.
+    user.teamId
+      ? db.account.findMany({ where: { orgId: user.orgId, teamId: user.teamId, ownerId: null }, orderBy: [{ priority: "desc" }], take: 8, include: { team: { select: { name: true } } } })
+      : Promise.resolve([]),
+    can(user.role, "accounts.assign") ? db.account.count({ where: { orgId: user.orgId, ...stageWhere("unassigned") } }) : Promise.resolve(0),
   ]);
   const upcoming = await db.task.findMany({ where: { orgId: user.orgId, ownerId: user.id, done: false, dueAt: { gte: end } }, orderBy: { dueAt: "asc" }, take: 8 });
   const stuck = myDeals.map((d) => ({ d, why: isStuck(d) })).filter((x) => x.why);
@@ -38,6 +46,12 @@ export default async function MyDay({ searchParams }: { searchParams: Promise<{ 
         <Link className="btn btn-primary" href="/accounts/new">Add company</Link>
       </div>
       <Flash ok={sp.ok} error={sp.error} />
+      {pool > 0 && (
+        <div className="notice row" style={{ justifyContent: "space-between" }}>
+          <span>{pool} new {pool === 1 ? "lead is" : "leads are"} waiting to be assigned to a team.</span>
+          <Link className="btn btn-sm btn-primary" href="/accounts?status=unassigned">Assign them</Link>
+        </div>
+      )}
       <div className="split">
         <div className="stack">
           <section className="card">
@@ -51,7 +65,7 @@ export default async function MyDay({ searchParams }: { searchParams: Promise<{ 
                   <li key={t.id} className="row" style={{ justifyContent: "space-between" }}>
                     <span>
                       {href ? <Link href={href}>{t.title}</Link> : t.title}
-                      <div className={overdue ? "" : "faint"} style={overdue ? { color: "var(--bad)", fontSize: 13 } : undefined}>{overdue ? "Overdue since " : "Due "}{day(t.dueAt)}</div>
+                      <div className={overdue ? "" : "faint"} style={overdue ? { color: "var(--bad)", fontSize: 13 } : undefined}>{overdue ? "Overdue since " : "Due "}{day(t.dueAt)}{t.assignedBy && ` · from ${t.assignedBy.name}`}</div>
                     </span>
                     <form action={completeTask}><input type="hidden" name="taskId" value={t.id} /><input type="hidden" name="backTo" value="/today" /><button className="btn btn-sm">Done</button></form>
                   </li>
@@ -69,9 +83,31 @@ export default async function MyDay({ searchParams }: { searchParams: Promise<{ 
             </details>
           </section>
 
+          {queue.length > 0 && (
+            <section className="card">
+              <h2>Waiting in the {queue[0].team?.name} queue</h2>
+              <p className="faint" style={{ marginTop: -6 }}>Pick one up to make it yours. Highest priority first.</p>
+              <form action={assignMany}>
+                <input type="hidden" name="backTo" value="/today" />
+                <table>
+                  <tbody>
+                    {queue.map((a) => (
+                      <tr key={a.id}>
+                        <td><Link href={`/accounts/${a.id}`}>{a.name}</Link><div className="faint">{a.domain}{a.city ? ` · ${a.city}` : ""}</div></td>
+                        <td><span className={`badge ${a.needLabel}`}>{a.needLabel}</span></td>
+                        <td className="num"><strong>{a.priority}</strong></td>
+                        <td><button className="btn btn-sm" name="pick" value={a.id}>Pick up</button></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </form>
+            </section>
+          )}
+
           <section className="card">
             <h2>Next accounts to work</h2>
-            <p className="faint" style={{ marginTop: -6 }}>Highest priority companies with no deal yet, yours or unassigned.</p>
+            <p className="faint" style={{ marginTop: -6 }}>Your highest priority companies with no deal yet.</p>
             <table>
               <tbody>
                 {topAccounts.map((a) => (
@@ -82,7 +118,7 @@ export default async function MyDay({ searchParams }: { searchParams: Promise<{ 
                     <td className="num"><strong>{a.priority}</strong></td>
                   </tr>
                 ))}
-                {topAccounts.length === 0 && <tr><td className="faint">No accounts waiting. Import a list or add a company.</td></tr>}
+                {topAccounts.length === 0 && <tr><td className="faint">{queue.length ? "None yet. Pick one up from your team's queue." : "No accounts assigned to you yet."}</td></tr>}
               </tbody>
             </table>
           </section>

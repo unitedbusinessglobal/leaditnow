@@ -13,6 +13,7 @@ Who can do what:
 |---|---|
 | Founder | Everything, including approvals, Net Revenue and adding another Founder |
 | Director, Marketing and Sales | Everything except deciding approvals; adds and manages the team; moves deals into contract stages; records contracts; sets discounts up to the limit; invoices |
+| Sales Lead | Assigns new leads to teams and people; creates teams and names their leads; can lead a team; finds leads, imports, accounts, deals, logging, Dashboard |
 | Business Analyst | Accounts, imports, deals, logging |
 | Inside Sales | Accounts, deals, logging |
 | Intern | Logging calls, meetings and notes |
@@ -21,12 +22,42 @@ Who can do what:
 
 Pick Light, Dark, Ocean, Forest or Sunset with the icons at the bottom of the menu (or top right of the home page). LeadItNow remembers it in your browser.
 
+## Progress banner
+
+The strip across the top of every page counts companies by how far they have got:
+
+| Figure | Counts companies that… |
+|---|---|
+| New, unassigned | came from a search, the review list or an import and have no team or owner yet |
+| In team queue | are assigned to a team but nobody has picked them up |
+| Being worked on | have an owner |
+| Contacted | have had a call, email, WhatsApp or meeting logged |
+| Responded | have a call logged as Connected, Call back later or Meeting booked, a message logged as Replied, or a meeting |
+| Deal started | have a deal that is not lost |
+| Contract signed | have a signed MOU or MSA recorded, or a client that is onboarding or live |
+
+Select a figure to see those companies.
+
+## Teams and assigning leads
+
+New companies from **Find leads**, weekly searches, the review list and CSV imports arrive **unassigned**. A company you add by hand stays with you.
+
+1. **Sales Lead** (or Director or Founder): on **Accounts**, choose **New, unassigned** in the progress filter, tick the companies, choose the team's queue (or a person) under **Assign the ticked accounts to**, add a note if useful, and select **Assign**. One account can also be assigned from its page under **Who works this**.
+2. **Team members**: companies waiting in your team's queue appear on My day under **Waiting in the … queue**, highest priority first. Select **Pick up** to make one yours. If you can't work it, open it and select **Put back in the team queue**.
+3. **Team lead**: on an account in your team, use **Assign to** to hand it to a member (with a handover note) or put it back in the queue. Use **Add a task** on the account to give a member a task.
+
+When an account moves to a person, they get a "Pick up …" task for 9 am the next day, the move and note are recorded on the timeline, and any open deals and the previous owner's open tasks for that account move with it. The Founder, Director and Sales Lead can move any account, including back to the unassigned pool.
+
+**Teams** shows each team's progress strip and, for each person, the companies they own, how many were contacted and responded, open and stuck deals, overdue tasks, touches in the last 7 days and their last touch. The Founder, Director and Sales Lead create teams there, name the lead (the lead joins the team) and add or remove members; people removed from a team keep the accounts they own.
+
 ## My day
 
 Your start page after signing in (`/today`). Work it top to bottom:
 
 - **Due today and overdue**: tasks from your next steps. Select **Done** when finished.
-- **Next accounts to work**: the highest-priority companies with no deal yet, yours or unassigned.
+- **Waiting in the team queue**: companies assigned to your team that nobody has picked up yet. **Pick up** makes one yours.
+- **Next accounts to work**: your highest-priority companies with no deal yet.
+- Tasks given to you by your team lead show who gave them.
 - **My open deals**: each with its stage and next step. Red text means the deal is stuck.
 
 ## Adding companies
@@ -62,7 +93,7 @@ Founder, Director and Business Analysts can search for companies by industry and
 
 1. **Find leads**, pick the source, industry and city; add keywords to narrow it (for example "garment exporters").
 2. Tick **Also run this search every week** to keep finding new companies (Mondays, 2:30 am IST).
-3. Companies with their own website are added as accounts and scanned. Companies already in LeadItNow are not added twice.
+3. Companies with their own website are added as unassigned accounts, ready for the Sales Lead to assign. Companies already in LeadItNow are not added twice.
 4. Companies with no website of their own (or only a Facebook or IndiaMART page) go to the **Review list**. Use **Search the web**, paste the company's website and select **Add**, or **Dismiss** it.
 
 **Company register files**: download the company master data file for Tamil Nadu from data.gov.in, save it as CSV and import it. Active companies go to the review list (they have no website in the file); struck-off and dissolved companies are skipped.
@@ -114,7 +145,7 @@ A deal is **stuck** when it has no next step, its next step is overdue, or it ha
 
 ### Logging touches
 
-Use **Log a touch** on the account or deal page after every call, meeting, email or WhatsApp message. Calls and meetings must end with a **next step** and a date: it becomes your task and the deal's next step. Calls with the outcome "Not interested" or "Wrong number" need no next step.
+Use **Log a touch** on the account or deal page after every call, meeting, email or WhatsApp message. Use the outcome **Replied** when an email or WhatsApp message gets a reply. Calls and meetings must end with a **next step** and a date: it becomes your task and the deal's next step. Calls with the outcome "Not interested" or "Wrong number" need no next step.
 
 ### Contracts, discounts and approvals
 

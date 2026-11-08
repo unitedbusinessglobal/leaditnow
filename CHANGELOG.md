@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-08 — v0.7.0 teams and assignment (LDITNW-30)
+
+- **Sales Lead** role: assigns new leads, manages teams, sees the Dashboard; can lead a team.
+- **Teams** page: create a team and name its lead (who joins it), add or remove members; for each team, its own progress strip and a row per person with accounts, contacted, responded, open deals, stuck deals, overdue tasks, touches in the last 7 days and last touch.
+- Companies from **Find leads**, the weekly searches, the review list and CSV imports now start **unassigned**. A company added by hand stays with the person who added it.
+- **Assigning**: the Founder, Director and Sales Lead assign any account to a team queue or a person (one at a time, or ticked in bulk on Accounts) and can take it back to the unassigned pool. A team lead hands accounts in the team to a member or puts them back in the queue. A team member **picks up** an account from the team queue (on My day or Accounts) or puts their own back.
+- Every move is logged on the account timeline with an optional handover note. The new owner gets a "Pick up …" task for the next morning; open deals and the previous owner's open tasks for the account move with it.
+- Only the Founder, Director, Sales Lead or the team lead can change a deal's owner.
+- **Tasks for others**: a team lead can give a task to a team member, and the Founder, Director and Sales Lead to anyone; the task shows who gave it.
+- **Progress banner** across the top of every page: new and unassigned, in team queue, being worked on, contacted, responded, deal started, contract signed. Each figure opens the matching accounts; Accounts has the same "progress" filter plus "My team's".
+- New call outcome **Replied** (for email and WhatsApp replies); replies, connected calls, call-backs, booked meetings and meetings count as "responded".
+
 ## 2026-11-08 — v0.6.0 enrichment (LDITNW-29)
 
 - **Published contact details**: every scan saves the business emails and phone numbers a company publishes on its own website, with the page they came from; one click adds one as a contact (source recorded for DPDP). The office phone is filled if empty.

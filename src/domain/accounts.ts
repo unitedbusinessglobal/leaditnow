@@ -27,6 +27,7 @@ export interface NewAccount {
   staffSize?: number | null;
   phone?: string | null;
   ownerId?: string | null;
+  teamId?: string | null;
   source?: string;
   sourceNote?: string | null;
 }
@@ -46,6 +47,8 @@ export async function upsertAccount(db: PrismaClient, orgId: string, a: NewAccou
       staffSize: a.staffSize ?? null,
       phone: normalisePhone(a.phone),
       ownerId: a.ownerId ?? null,
+      teamId: a.teamId ?? null,
+      assignedAt: a.ownerId || a.teamId ? new Date() : null,
       source: a.source ?? "manual",
       sourceNote: a.sourceNote ?? null,
     },

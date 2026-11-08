@@ -66,7 +66,7 @@ export async function addCandidate(fd: FormData) {
   try {
     res = await upsertAccount(db, user.orgId, {
       domain: website, name: c!.name, city: c!.city, industry: c!.industry, staffSize: c!.staffSize, phone: c!.phone,
-      ownerId: user.id, source: c!.source, sourceNote: c!.note,
+      ownerId: null, source: c!.source, sourceNote: c!.note,
     });
   } catch (e) {
     go("/leads/review", "error", (e as Error).message);
