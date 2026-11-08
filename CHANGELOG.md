@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-08 — Google sign-in on
+
+- Google OAuth client configured in Vercel (`AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`); production sign-in enabled (LDITNW-7).
+
 ## 2026-11-06 — v0.3.0 sprint 1 and beyond
 
 - Sign-in: Google (invite-only), Founder bootstrap from `FOUNDER_EMAIL`, roles and permissions, Team page; email test sign-in on local and preview builds only (LDITNW-7).
