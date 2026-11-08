@@ -17,6 +17,7 @@ enum Role {
   BA
   SALES
   INTERN
+  SALES_LEAD
 }
 
 enum DealStage {
@@ -93,6 +94,22 @@ model Organization {
   createdAt DateTime  @default(now())
   users     User[]
   accounts  Account[]
+  teams     Team[]
+}
+
+/// A sales team. New leads are assigned to a team; the team lead or a member picks them up.
+model Team {
+  id        String       @id @default(cuid())
+  orgId     String
+  org       Organization @relation(fields: [orgId], references: [id])
+  name      String
+  leadId    String?
+  lead      User?        @relation("TeamLead", fields: [leadId], references: [id])
+  members   User[]       @relation("TeamMembers")
+  accounts  Account[]
+  createdAt DateTime     @default(now())
+
+  @@unique([orgId, name])
 }
 
 model User {
@@ -109,6 +126,10 @@ model User {
   deals     Deal[]       @relation("DealOwner")
   tasks     Task[]       @relation("TaskOwner")
   activities Activity[]  @relation("ActivityUser")
+  teamId    String?
+  team      Team?        @relation("TeamMembers", fields: [teamId], references: [id])
+  leads     Team[]       @relation("TeamLead")
+  tasksGiven Task[]      @relation("TaskAssigner")
 }
 
 model Account {
@@ -149,6 +170,9 @@ model Account {
   priority    Int             @default(0)
   ownerId    String?
   owner      User?           @relation("AccountOwner", fields: [ownerId], references: [id])
+  teamId     String?
+  team       Team?           @relation(fields: [teamId], references: [id])
+  assignedAt DateTime? // when it last went to a team or person
   createdAt  DateTime        @default(now())
   updatedAt  DateTime        @updatedAt
   contacts   Contact[]
@@ -161,6 +185,7 @@ model Account {
   @@unique([orgId, domain])
   @@index([orgId, phone])
   @@index([orgId, priority])
+  @@index([orgId, teamId, ownerId])
 }
 
 model Contact {
@@ -284,6 +309,8 @@ model Task {
   done       Boolean   @default(false)
   ownerId    String
   owner      User      @relation("TaskOwner", fields: [ownerId], references: [id])
+  assignedById String? // set when someone else gave this task
+  assignedBy User?     @relation("TaskAssigner", fields: [assignedById], references: [id])
   entity     String? // Account | Deal | Contact
   entityId   String?
   createdAt  DateTime  @default(now())
