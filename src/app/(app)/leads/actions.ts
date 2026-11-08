@@ -37,10 +37,12 @@ export async function search(fd: FormData) {
   const { run, result } = await runDiscovery(db, user.orgId, source, i, { userId: user.id, savedSearchId: savedId });
   if (savedId) await db.savedSearch.update({ where: { id: savedId }, data: { lastRunAt: new Date() } });
   if (!result) go("/leads", "error", run.error ?? "The search failed.");
-  // Scan a few new accounts now; the nightly job scans the rest.
-  const fresh = await db.account.findMany({ where: { id: { in: result!.accountIds }, lastScannedAt: null }, take: 4 });
-  await Promise.all(fresh.map((a) => scanAndSave(db, a)));
-  go("/leads", "ok", `Found ${result!.found}: ${result!.added} new accounts, ${result!.candidates} to review, ${result!.existing} already known.${savedId ? " Saved to run weekly." : ""}`);
+  // New accounts are scanned by the nightly job, or straight away with "Scan next 8" on Accounts.
+  const r = result!;
+  const msg = r.found === 0
+    ? `No companies found for this search. Try another industry, a nearby city, or Google Places.`
+    : `Found ${r.found}: ${r.added} new accounts, ${r.candidates} to review, ${r.existing} already known.${r.added ? " New accounts are scanned tonight, or use “Scan next 8” on Accounts." : ""}${savedId ? " Saved to run weekly." : ""}`;
+  go("/leads", r.found === 0 ? "error" : "ok", msg);
 }
 
 export async function toggleSaved(fd: FormData) {

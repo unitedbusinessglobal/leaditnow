@@ -185,3 +185,5 @@ details summary { cursor: pointer; color: var(--brand); }
   .lp-cta { padding: 40px 20px; }
   .lp-nav .themes { display: none; }
 }
+.spin { display: inline-block; width: 12px; height: 12px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .7s linear infinite; vertical-align: -1px; }
+@keyframes spin { to { transform: rotate(360deg); } }

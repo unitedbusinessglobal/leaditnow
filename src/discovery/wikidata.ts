@@ -42,7 +42,8 @@ export function parseWikidata(json: { results?: { bindings?: Binding[] } }, i: S
     if (/^Q\d+$/.test(name)) continue; // no English label
     const label = b.industryLabel?.value;
     const words = INDUSTRY_WORDS[i.industry];
-    if (label && words && !words.test(label) && !byId.has(id)) continue; // a different industry
+    // Keep only companies whose Wikidata industry fits (drops parties, newspapers, societies without one).
+    if (words && !(label && words.test(label)) && !byId.has(id)) continue;
     const prev = byId.get(id);
     const staff = b.employees ? Math.round(Number(b.employees.value)) : null;
     if (prev) { prev.staffSize = prev.staffSize ?? staff; continue; }

@@ -2,6 +2,9 @@ import Link from "next/link";
 import { requireCan } from "@/lib/session";
 import { Flash } from "@/components/Flash";
 import { createAccount } from "../actions";
+import { SubmitButton } from "@/components/SubmitButton";
+
+export const maxDuration = 60;
 
 export default async function NewAccount({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   await requireCan("accounts.edit");
@@ -35,7 +38,7 @@ export default async function NewAccount({ searchParams }: { searchParams: Promi
           <label>Phone<input name="contactPhone" /></label>
         </div>
         <label>Where did this lead come from? (kept for DPDP compliance)<input name="sourceNote" placeholder="Referral from…, trade fair, website enquiry…" /></label>
-        <div><button className="btn btn-primary">Add and scan</button></div>
+        <div><SubmitButton pending="Adding and scanning the website…">Add and scan</SubmitButton></div>
       </form>
     </div>
   );

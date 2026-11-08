@@ -108,7 +108,12 @@ describe("lead source connectors", () => {
         { item: { value: "http://www.wikidata.org/entity/Q999" }, itemLabel: { value: "Q999" }, website: { value: "https://x.in" } },
       ] },
     }, { industry: "IT and software", city: "Chennai" });
-    expect(found).toEqual([{ source: "wikidata", externalId: "Q123", name: "Ashok Leyland", website: "https://www.ashokleyland.com", city: "Chennai", industry: "IT and software", staffSize: 11000 }]);
+    expect(found).toEqual([]); // no industry listed: not kept for an industry search
+    const auto = parseWikidata({ results: { bindings: [
+      { item: { value: "http://www.wikidata.org/entity/Q726193" }, itemLabel: { value: "Ashok Leyland" }, website: { value: "https://ashokleyland.com" }, employees: { value: "11906" }, industryLabel: { value: "automotive industry" } },
+      { item: { value: "http://www.wikidata.org/entity/Q1255973" }, itemLabel: { value: "Dravida Munnetra Kazhagam" }, website: { value: "https://www.dmk.in/" } },
+    ] } }, { industry: "Manufacturing", city: "Chennai" });
+    expect(auto).toEqual([{ source: "wikidata", externalId: "Q726193", name: "Ashok Leyland", website: "https://ashokleyland.com", city: "Chennai", industry: "automotive industry", staffSize: 11906 }]);
   });
 });
 

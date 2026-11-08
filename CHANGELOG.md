@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-11-08 — v0.5.1 search feedback (LDITNW-27)
+
+- Search, Add and scan, and Scan next 8 buttons show progress while they run; searches no longer scan websites inline (the nightly job or "Scan next 8" does), so results come back faster.
+- A search that finds nothing says so, with suggestions.
+- OpenStreetMap "Manufacturing" no longer matches generic company offices; Wikidata keeps only companies whose listed industry fits.
+
 ## 2026-11-08 — v0.5.0 landing page and family theme (LDITNW-28)
 
 - Public landing page at `/` in the AInformatIQ product layout (as TestItNow): gradient mark and LeadIt**Now** logo, hero with a product mock-up, features, how it works, sources, call to action, footer linking the other products.

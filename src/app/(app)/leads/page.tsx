@@ -6,6 +6,10 @@ import { Flash } from "@/components/Flash";
 import { CITIES, INDUSTRIES, SOURCE_LABEL, type SourceId } from "@/discovery/types";
 import { sourceReady } from "@/discovery/ingest";
 import { search, toggleSaved } from "./actions";
+import { SubmitButton } from "@/components/SubmitButton";
+
+// Searches call outside services; give them time.
+export const maxDuration = 120;
 
 const SOURCES: { id: SourceId; cost: string; about: string }[] = [
   { id: "osm", cost: "Free", about: "Shops, offices, clinics and factories mapped on OpenStreetMap that list a website. Coverage varies by area." },
@@ -38,7 +42,7 @@ function SearchForm({ source, disabled }: { source: SourceId; disabled: string |
         </label>
       )}
       <label className="inline"><input type="checkbox" name="save" disabled={!!disabled} /> Also run this search every week</label>
-      {disabled ? <p className="notice" style={{ margin: 0 }}>{disabled}</p> : <div><button className="btn btn-primary btn-sm">Search {SOURCE_LABEL[source]}</button></div>}
+      {disabled ? <p className="notice" style={{ margin: 0 }}>{disabled}</p> : <div><SubmitButton className="btn btn-primary btn-sm" pending={`Searching ${SOURCE_LABEL[source]}… up to a minute`}>Search {SOURCE_LABEL[source]}</SubmitButton></div>}
     </form>
   );
 }

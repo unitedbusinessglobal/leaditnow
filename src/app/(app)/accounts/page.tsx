@@ -6,6 +6,9 @@ import { can } from "@/lib/roles";
 import { day } from "@/lib/format";
 import { Flash } from "@/components/Flash";
 import { scanPending } from "./actions";
+import { SubmitButton } from "@/components/SubmitButton";
+
+export const maxDuration = 120;
 
 type SP = { q?: string; need?: string; hint?: string; owner?: string; sort?: string; page?: string; ok?: string; error?: string };
 
@@ -56,7 +59,7 @@ export default async function Accounts({ searchParams }: { searchParams: Promise
       {unscanned > 0 && can(user.role, "accounts.edit") && (
         <form action={scanPending} className="notice row" style={{ justifyContent: "space-between" }}>
           <span>{unscanned} {unscanned === 1 ? "account has" : "accounts have"} not been scanned yet. The daily job scans them; you can also scan a batch now.</span>
-          <button className="btn btn-sm">Scan next 8</button>
+          <SubmitButton className="btn btn-sm" pending="Scanning…">Scan next 8</SubmitButton>
         </form>
       )}
       <form className="card row" method="get">
