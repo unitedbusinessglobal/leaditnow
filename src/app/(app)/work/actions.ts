@@ -38,7 +38,7 @@ export async function completeTask(fd: FormData) {
     where: { id: str(fd.get("taskId")), orgId: user.orgId, ownerId: user.id },
     data: { done: true, finishedAt: new Date() },
   });
-  revalidatePath("/");
+  revalidatePath("/today");
   const backTo = str(fd.get("backTo"));
   if (backTo) redirect(backTo);
 }
@@ -47,7 +47,7 @@ export async function addTask(fd: FormData) {
   const user = await requireCan("activities.log");
   const title = str(fd.get("title"));
   const dueAt = fromDateInput(fd.get("dueAt"));
-  const backTo = str(fd.get("backTo")) || "/";
+  const backTo = str(fd.get("backTo")) || "/today";
   const sep = backTo.includes("?") ? "&" : "?";
   if (!title || !dueAt) redirect(`${backTo}${sep}error=${encodeURIComponent("Add the task and its date.")}`);
   await db.task.create({

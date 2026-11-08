@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-11-08 — v0.5.0 landing page and family theme (LDITNW-28)
+
+- Public landing page at `/` in the AInformatIQ product layout (as TestItNow): gradient mark and LeadIt**Now** logo, hero with a product mock-up, features, how it works, sources, call to action, footer linking the other products.
+- The five shared themes (Light, Dark, Ocean, Forest, Sunset) across the landing page, sign-in and the app; the choice is remembered in the browser under the same key the family uses.
+- Restyled sign-in page; Inter font; favicon.
+- My day moved from `/` to `/today`; sign-in lands there.
+- Custom domain `leaditnow.ainformatiq.com` added to the Vercel project (needs a CNAME at the DNS host).
+- Wikidata searches return businesses only and respect the chosen industry (LDITNW-27).
+
 ## 2026-11-08 — v0.4.0 Find leads (LDITNW-27)
 
 - **Find leads** page: search by industry and city across OpenStreetMap and Wikidata (free), Google Places (free tier, then paid) and Apollo (company search, no credits).

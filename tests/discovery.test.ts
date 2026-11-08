@@ -93,7 +93,14 @@ describe("lead source connectors", () => {
   });
 
   it("Wikidata: query and parse, one row per company", () => {
-    expect(wikidataQuery({ industry: "IT and software", city: "Chennai" })).toContain('?city rdfs:label "Chennai"@en; wdt:P17 wd:Q668.');
+    const q = wikidataQuery({ industry: "IT and software", city: "Chennai" });
+    expect(q).toContain('?city rdfs:label "Chennai"@en; wdt:P17 wd:Q668.');
+    expect(q).toContain("wdt:P31/wdt:P279* wd:Q4830453"); // businesses only
+    const media = parseWikidata({ results: { bindings: [
+      { item: { value: "http://www.wikidata.org/entity/Q926175" }, itemLabel: { value: "The Hindu" }, website: { value: "https://www.thehindu.com" }, industryLabel: { value: "newspaper publishing" } },
+      { item: { value: "http://www.wikidata.org/entity/Q5" }, itemLabel: { value: "Zoho" }, website: { value: "https://zoho.com" }, industryLabel: { value: "software industry" } },
+    ] } }, { industry: "IT and software", city: "Chennai" });
+    expect(media.map((m) => m.name)).toEqual(["Zoho"]);
     const found = parseWikidata({
       results: { bindings: [
         { item: { value: "http://www.wikidata.org/entity/Q123" }, itemLabel: { value: "Ashok Leyland" }, website: { value: "https://www.ashokleyland.com" }, employees: { value: "11000" } },

@@ -4,7 +4,7 @@ import { requireUser } from "@/lib/session";
 import { day, when, todayIst, inr } from "@/lib/format";
 import { Flash } from "@/components/Flash";
 import { STAGE_LABEL, isStuck } from "@/domain/deals";
-import { completeTask, addTask } from "./work/actions";
+import { completeTask, addTask } from "../work/actions";
 
 export default async function MyDay({ searchParams }: { searchParams: Promise<{ ok?: string; error?: string }> }) {
   const user = await requireUser();
@@ -53,7 +53,7 @@ export default async function MyDay({ searchParams }: { searchParams: Promise<{ 
                       {href ? <Link href={href}>{t.title}</Link> : t.title}
                       <div className={overdue ? "" : "faint"} style={overdue ? { color: "var(--bad)", fontSize: 13 } : undefined}>{overdue ? "Overdue since " : "Due "}{day(t.dueAt)}</div>
                     </span>
-                    <form action={completeTask}><input type="hidden" name="taskId" value={t.id} /><input type="hidden" name="backTo" value="/" /><button className="btn btn-sm">Done</button></form>
+                    <form action={completeTask}><input type="hidden" name="taskId" value={t.id} /><input type="hidden" name="backTo" value="/today" /><button className="btn btn-sm">Done</button></form>
                   </li>
                 );
               })}
@@ -61,7 +61,7 @@ export default async function MyDay({ searchParams }: { searchParams: Promise<{ 
             <details style={{ marginTop: 10 }}>
               <summary>Add a task</summary>
               <form action={addTask} className="row" style={{ marginTop: 8 }}>
-                <input type="hidden" name="backTo" value="/" />
+                <input type="hidden" name="backTo" value="/today" />
                 <input name="title" required placeholder="What to do" style={{ flex: 1, minWidth: 220 }} />
                 <input name="dueAt" type="date" required />
                 <button className="btn btn-sm">Add</button>

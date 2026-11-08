@@ -17,9 +17,13 @@ Who can do what:
 | Inside Sales | Accounts, deals, logging |
 | Intern | Logging calls, meetings and notes |
 
+## Themes
+
+Pick Light, Dark, Ocean, Forest or Sunset with the icons at the bottom of the menu (or top right of the home page). LeadItNow remembers it in your browser.
+
 ## My day
 
-The home page. Work it top to bottom:
+Your start page after signing in (`/today`). Work it top to bottom:
 
 - **Due today and overdue**: tasks from your next steps. Select **Done** when finished.
 - **Next accounts to work**: the highest-priority companies with no deal yet, yours or unassigned.

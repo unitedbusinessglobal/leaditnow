@@ -4,6 +4,8 @@ import { signOut } from "@/auth";
 import { requireUser } from "@/lib/session";
 import { can, ROLE_LABEL } from "@/lib/roles";
 import { db } from "@/lib/db";
+import { Logo } from "@/components/Logo";
+import { ThemePicker } from "@/components/ThemePicker";
 
 export const dynamic = "force-dynamic";
 
@@ -15,8 +17,8 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div className="shell">
       <nav className="nav">
-        <div className="brand">LeadItNow</div>
-        <Link href="/">My day</Link>
+        <div className="brand"><Logo href="/today" /></div>
+        <Link href="/today">My day</Link>
         <Link href="/accounts">Accounts</Link>
         {can(user.role, "leads.find") && <Link href="/leads">Find leads</Link>}
         <Link href="/pipeline">Pipeline</Link>
@@ -34,6 +36,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           {user.name}
           <br />
           {ROLE_LABEL[user.role]}
+          <div style={{ margin: "10px 0 2px" }}><ThemePicker /></div>
           <form action={async () => { "use server"; await signOut({ redirectTo: "/login" }); }}>
             <button className="btn btn-sm" style={{ marginTop: 8 }}>Sign out</button>
           </form>
