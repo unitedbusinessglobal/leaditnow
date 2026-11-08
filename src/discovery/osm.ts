@@ -5,7 +5,7 @@ import { UA, type Fetch, type Found, type SearchInput } from "./types";
  * stored records keep "OpenStreetMap" as their source for attribution.
  */
 const TAGS: Record<string, string[]> = {
-  "Manufacturing": ['["industrial"]', '["man_made"="works"]', '["craft"~"metal_construction|carpenter|electronics_repair|printer|sawmill|joiner|tailor"]', '["landuse"="industrial"]["name"]'],
+  "Manufacturing": ['["industrial"]', '["man_made"="works"]', '["craft"~"metal_construction|carpenter|electronics_repair|printer|sawmill|joiner|tailor"]'],
   "Textiles and garments": ['["shop"~"clothes|fabric|tailor"]', '["craft"~"tailor|textile|dressmaker"]', '["industrial"~"textile|garment"]'],
   "Engineering and auto components": ['["shop"~"car_parts|car_repair|hardware"]', '["industrial"]', '["craft"~"metal_construction|electrician|plumber"]'],
   "Retail and distribution": ['["shop"]', '["office"~"company|wholesale"]'],
