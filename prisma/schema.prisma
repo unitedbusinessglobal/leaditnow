@@ -88,6 +88,8 @@ model Organization {
   id        String    @id @default(cuid())
   name      String
   plan      String    @default("internal")
+  /// Estimate settings: { itSpendPct: { [industry]: number }, usdInr: number, itPerEmployeeInr: number }
+  settings  Json?
   createdAt DateTime  @default(now())
   users     User[]
   accounts  Account[]
@@ -126,6 +128,19 @@ model Account {
   lastScannedAt DateTime?
   placeId    String? // Google Places ID (the only Places field we may keep indefinitely)
   apolloId   String?
+  // Size and finance (Apollo enrichment, company register, or entered by hand)
+  revenueInr     Float?
+  revenueSource  String? // apollo | manual | register
+  listed         Boolean?
+  stockSymbol    String?
+  stockExchange  String?
+  foundedYear    Int?
+  technologies   String[]  @default([])
+  paidUpCapitalInr Float?
+  companyClass   String? // Private | Public | OPC | LLP
+  cin            String?
+  enrichedAt     DateTime?
+  contactPoints  ContactPoint[]
   needScore   Int             @default(0)
   needLabel   String          @default("None")
   stack       String[]
@@ -353,6 +368,7 @@ model LeadCandidate {
   industry   String?
   staffSize  Int?
   note       String?
+  extra      Json? // register details carried to the account: cin, paidUpCapitalInr, listed, companyClass
   status     CandidateStatus @default(NEW)
   accountId  String?
   createdAt  DateTime        @default(now())
@@ -393,4 +409,18 @@ model DiscoveryRun {
   createdAt   DateTime @default(now())
 
   @@index([orgId, createdAt])
+}
+
+/// Business emails and phone numbers published on the company's own website, with the page they came from.
+model ContactPoint {
+  id        String   @id @default(cuid())
+  orgId     String
+  accountId String
+  account   Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  kind      String // email | phone
+  value     String
+  sourceUrl String
+  foundAt   DateTime @default(now())
+
+  @@unique([accountId, kind, value])
 }
