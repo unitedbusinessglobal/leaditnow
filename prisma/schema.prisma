@@ -59,6 +59,12 @@ enum SignalCategory {
   STACK
 }
 
+enum CandidateStatus {
+  NEW
+  ADDED
+  DISMISSED
+}
+
 enum ApprovalKind {
   DISCOUNT
   TERMS
@@ -118,6 +124,8 @@ model Account {
   sourceNote String? // where the record came from and why we hold it (DPDP Act)
   notes      String?
   lastScannedAt DateTime?
+  placeId    String? // Google Places ID (the only Places field we may keep indefinitely)
+  apolloId   String?
   needScore   Int             @default(0)
   needLabel   String          @default("None")
   stack       String[]
@@ -329,4 +337,60 @@ model Invoice {
 
   @@unique([orgId, number])
   @@index([orgId, issuedAt])
+}
+
+/// Companies found by a lead source without a usable website: the team finds the site, then adds them.
+model LeadCandidate {
+  id         String          @id @default(cuid())
+  orgId      String
+  source     String // google-places | apollo | csv:<file>
+  externalId String? // Places ID, Apollo ID or CIN
+  name       String
+  city       String?
+  address    String?
+  phone      String?
+  website    String? // a social or marketplace page, not the company's own site
+  industry   String?
+  staffSize  Int?
+  note       String?
+  status     CandidateStatus @default(NEW)
+  accountId  String?
+  createdAt  DateTime        @default(now())
+
+  @@unique([orgId, source, externalId])
+  @@index([orgId, status])
+}
+
+/// A Find leads search kept to run every week.
+model SavedSearch {
+  id          String    @id @default(cuid())
+  orgId       String
+  source      String // google-places | apollo
+  industry    String
+  city        String
+  keywords    String?
+  staffRange  String? // Apollo, e.g. "11,200"
+  active      Boolean   @default(true)
+  lastRunAt   DateTime?
+  createdById String
+  createdAt   DateTime  @default(now())
+
+  @@index([orgId, active])
+}
+
+model DiscoveryRun {
+  id          String   @id @default(cuid())
+  orgId       String
+  source      String
+  query       String
+  found       Int      @default(0)
+  added       Int      @default(0)
+  existing    Int      @default(0)
+  candidates  Int      @default(0)
+  error       String?
+  savedSearchId String?
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  @@index([orgId, createdAt])
 }
