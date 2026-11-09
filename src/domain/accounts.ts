@@ -13,6 +13,7 @@ const DECISION_MAKER = /\b(owner|founder|co-?founder|director|ceo|cto|cfo|coo|md
  */
 export function normalisePhone(raw?: string | null, country?: string | null): string | null {
   if (!raw) return null;
+  raw = raw.split(/[;,/]/)[0]; // "+971 4 394 0855;+971 4 394 1657" -> the first number
   const digits = raw.replace(/\D/g, "");
   if (digits.length < 8) return null;
   const intl = /^\s*(\+|00)/.test(raw) && !/^\s*(\+|00)\s*91/.test(raw);

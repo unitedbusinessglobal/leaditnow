@@ -1,6 +1,6 @@
 {
   "name": "leaditnow",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "private": true,
   "description": "LeadItNow - find Indian businesses that need software or IT services, show the evidence, and work them from first contact to signed MSA.",
   "scripts": {

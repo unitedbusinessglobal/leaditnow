@@ -98,6 +98,10 @@ Founder, Director and Business Analysts can search for companies by industry and
 
 **Company register files**: download the company master data file for Tamil Nadu from data.gov.in, save it as CSV and import it. Active companies go to the review list (they have no website in the file); struck-off and dissolved companies are skipped.
 
+**Other countries**: pick the **Country** (India, the Gulf, Singapore, Malaysia, the UK and Ireland, the US and Canada, Australia and New Zealand, South Africa, Kenya) and a city; the suggestions follow the country, and any other city can be typed. Accounts show their country next to the city and can be filtered by it. Before contacting companies abroad, follow that country's rules: in the UK, EU and Canada, business emails need a legitimate reason and an easy opt-out (Canada's CASL is strict: prefer a call, LinkedIn or a published contact form first); in the US every email needs a physical address and an unsubscribe; in the Gulf, respect working days (Sunday–Thursday in Saudi Arabia, Kuwait and Qatar; Monday–Friday in the UAE).
+
+**Apollo without the API**: Apollo's API needs its Organization plan. On a cheaper or free Apollo plan, search in Apollo, export the list as CSV (the free plan exports 25 at a time) and use **Import CSV**; the companies arrive unassigned for the Sales Lead. Don't use bots or scrapers on Apollo: its terms forbid them and the account can be suspended.
+
 **Decision makers (Apollo)**: on an account, select **Find decision makers (Apollo)** to see owners, directors and IT heads. **Add** puts the person in Contacts with their work email; each one uses Apollo credits.
 
 ## Reading an account
@@ -117,7 +121,9 @@ Record how you got every contact. If someone asks not to be contacted, select **
 ### Contact details, size and IT budget
 
 - **Published contact details**: emails and phone numbers the company lists on its own website, found when it is scanned. Select **Add as contact** to keep one; the page it came from is recorded.
-- **Size and finance**: revenue, staff, listed or unlisted (with a link to the share price and market cap), founded year, paid-up capital and CIN. **Enrich from Apollo** fills them automatically once Apollo is connected; until then, use **Enter or correct by hand**. What you type is never overwritten by Apollo.
+- **Contact details found**: **Find emails** looks up work emails on the company's domain with Hunter, then Snov.io, with the person's name, job title and how confident the source is. **Add as contact** keeps one, recording where it came from.
+- **Size and finance**: revenue, staff, listed or unlisted (with a link to the share price and market cap), founded year, paid-up capital and CIN. **Fetch size and revenue** asks the connected data sources in order (People Data Labs, Hunter, Prospeo, Snov.io, Lusha, Apollo), stopping once staff, revenue and industry are known, so free credits go furthest. The revenue line says which source estimated it. Until a source is connected, use **Enter or correct by hand**. What you type is never overwritten.
+- **Data sources** (Settings) lists every source, whether it is connected, what its free plan gives, and how to connect it.
 - **Estimated IT budget**: a yearly band worked out from revenue and the industry's IT-spend percentage (Founder and Director set these under **Estimates**). It is an estimate to size the opportunity, not a figure to quote to the client.
 
 ## Working a deal

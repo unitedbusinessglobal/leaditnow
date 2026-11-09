@@ -19,7 +19,7 @@ export function wikidataQuery(i: SearchInput): string {
 
 /** Wikidata industry labels that fit each target industry (companies with no industry are kept). */
 const INDUSTRY_WORDS: Record<string, RegExp> = {
-  "Manufacturing": /manufactur|automotive|engineering|steel|metal|machinery|chemical|cement|electrical|industr|textile|rubber|plastic/i,
+  "Manufacturing": /manufactur|automotive|engineering|steel|metal|machinery|chemical|cement|electrical|textile|rubber|plastic/i,
   "Textiles and garments": /textile|garment|apparel|cloth|fashion|yarn|cotton/i,
   "Engineering and auto components": /automotive|auto|engineering|machinery|vehicle|tyre|tire|component/i,
   "Retail and distribution": /retail|wholesale|distribut|trade|supermarket|jewel/i,

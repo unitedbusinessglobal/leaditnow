@@ -45,7 +45,9 @@ export function parseOverpass(json: { elements?: Element[] }, i: SearchInput): F
     const addr = [t["addr:housenumber"], t["addr:street"], t["addr:suburb"], t["addr:city"], t["addr:postcode"]].filter(Boolean).join(", ");
     out.push({
       source: "osm", externalId: key, name: t["name:en"] || t.name, website: t.website || t["contact:website"] || null,
-      phone: t.phone || t["contact:phone"] || t["contact:mobile"] || null, city: t["addr:city"] || i.city, country: market(i.country).code, address: addr || null, industry: i.industry,
+      phone: (t.phone || t["contact:phone"] || t["contact:mobile"] || "").split(/[;,]/)[0].trim() || null,
+      // Keep the searched (English) city when the map gives it in another script, e.g. Arabic.
+      city: t["addr:city:en"] || (t["addr:city"] && /^[\p{Script=Latin}\s.'-]+$/u.test(t["addr:city"]) ? t["addr:city"] : i.city), country: market(i.country).code, address: addr || null, industry: i.industry,
     });
   }
   return out;
