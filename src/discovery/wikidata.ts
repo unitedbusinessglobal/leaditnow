@@ -1,11 +1,12 @@
 import { UA, type Fetch, type Found, type SearchInput } from "./types";
+import { market } from "./markets";
 
 /** Businesses headquartered in the city (Wikidata, CC0) that list an official website. Mostly larger firms. */
 export function wikidataQuery(i: SearchInput): string {
   const city = i.city.replace(/["\\]/g, "");
   const kw = i.keywords?.trim() ? `FILTER(CONTAINS(LCASE(?itemLabel), "${i.keywords.trim().toLowerCase().replace(/["\\]/g, "")}"))` : "";
   return `SELECT ?item ?itemLabel ?website ?employees ?industryLabel WHERE {
-  ?city rdfs:label "${city}"@en; wdt:P17 wd:Q668.
+  ?city rdfs:label "${city}"@en; wdt:P17 wd:${market(i.country).wikidata}.
   ?item wdt:P159 ?city; wdt:P856 ?website.
   ?item wdt:P31/wdt:P279* wd:Q4830453.
   FILTER NOT EXISTS { ?item wdt:P576 ?dissolved }
@@ -18,7 +19,7 @@ export function wikidataQuery(i: SearchInput): string {
 
 /** Wikidata industry labels that fit each target industry (companies with no industry are kept). */
 const INDUSTRY_WORDS: Record<string, RegExp> = {
-  "Manufacturing": /manufactur|automotive|engineering|steel|metal|machinery|chemical|cement|electrical|industr|textile|rubber|plastic/i,
+  "Manufacturing": /manufactur|automotive|engineering|steel|metal|machinery|chemical|cement|electrical|textile|rubber|plastic/i,
   "Textiles and garments": /textile|garment|apparel|cloth|fashion|yarn|cotton/i,
   "Engineering and auto components": /automotive|auto|engineering|machinery|vehicle|tyre|tire|component/i,
   "Retail and distribution": /retail|wholesale|distribut|trade|supermarket|jewel/i,
@@ -48,7 +49,7 @@ export function parseWikidata(json: { results?: { bindings?: Binding[] } }, i: S
     const staff = b.employees ? Math.round(Number(b.employees.value)) : null;
     if (prev) { prev.staffSize = prev.staffSize ?? staff; continue; }
     byId.set(id, {
-      source: "wikidata", externalId: id, name, website: b.website?.value ?? null, city: i.city,
+      source: "wikidata", externalId: id, name, website: b.website?.value ?? null, city: i.city, country: market(i.country).code,
       industry: b.industryLabel?.value ?? i.industry, staffSize: staff,
     });
   }

@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-09 — v0.8.0 more data sources and international markets (LDITNW-31, LDITNW-32)
+
+- **Data sources**: People Data Labs, Hunter, Prospeo, Snov.io and Lusha join Apollo. **Fetch size and revenue** asks the connected sources in order (free plans first) and stops once staff, revenue and industry are known; a source that is out of credits or has no API on its plan is skipped and named. **Enrich next 20** on Accounts does the same in bulk.
+- **Find emails** on an account: work emails with names, job titles and confidence from Hunter, then Snov.io, kept under "Contact details found" with their source; **Add as contact** carries the name and title.
+- **Data sources** page (Settings) shows what is connected, each free plan and cheapest paid plan, and how to connect the rest.
+- Revenue shows which source estimated it and its range.
+- **International markets**: Find leads takes a country (India, UAE, Saudi Arabia, Qatar, Oman, Kuwait, Bahrain, Singapore, Malaysia, UK, Ireland, US, Canada, Australia, New Zealand, South Africa, Kenya) with suggested cities; any city can be typed. OpenStreetMap looks the city up inside that country (by English or local name), Wikidata filters by country, Google Places and Apollo search the city in that country. Weekly searches keep their country.
+- Accounts and review items carry a country; Accounts has a country filter and shows it next to the city. CSV imports read a Country column (code or name, e.g. "UAE", "UK") or work it out from the city.
+- Phone numbers outside India are kept in international form (+971 4123 4567); website scans read international and local numbers on foreign sites (by domain ending).
+- Fit score gives the target-city points for the main business cities in every market.
+
 ## 2026-11-08 — v0.7.0 teams and assignment (LDITNW-30)
 
 - **Sales Lead** role: assigns new leads, manages teams, sees the Dashboard; can lead a team.

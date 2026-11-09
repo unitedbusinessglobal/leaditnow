@@ -3,7 +3,9 @@ import { db } from "@/lib/db";
 import { requireCan } from "@/lib/session";
 import { when, day } from "@/lib/format";
 import { Flash } from "@/components/Flash";
-import { CITIES, INDUSTRIES, SOURCE_LABEL, type SourceId } from "@/discovery/types";
+import { INDUSTRIES, SOURCE_LABEL, type SourceId } from "@/discovery/types";
+import { MARKETS, countryName } from "@/discovery/markets";
+import { CountryCity } from "@/components/CountryCity";
 import { sourceReady } from "@/discovery/ingest";
 import { search, toggleSaved } from "./actions";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -26,9 +28,7 @@ function SearchForm({ source, disabled }: { source: SourceId; disabled: string |
         <label>Industry
           <select name="industry" defaultValue="Manufacturing" disabled={!!disabled}>{INDUSTRIES.map((i) => <option key={i}>{i}</option>)}</select>
         </label>
-        <label>City
-          <input name="city" list="cities" defaultValue="Chennai" disabled={!!disabled} />
-        </label>
+        <CountryCity markets={MARKETS} disabled={!!disabled} />
       </div>
       <label>Keywords (optional{source === "apollo" ? ", comma-separated" : ""})
         <input name="keywords" placeholder={source === "google-places" ? "e.g. pump manufacturers, garment exporters" : "narrows the search"} disabled={!!disabled} />
@@ -57,11 +57,10 @@ export default async function FindLeads({ searchParams }: { searchParams: Promis
   ]);
   return (
     <div className="stack">
-      <datalist id="cities">{CITIES.map((c) => <option key={c} value={c} />)}</datalist>
       <div className="head">
         <div>
           <h1>Find leads</h1>
-          <p className="muted" style={{ margin: 0 }}>Search by industry and city. Companies with their own website are added as accounts and scanned; the rest go to the review list.</p>
+          <p className="muted" style={{ margin: 0 }}>Search by industry, country and city: India, the Gulf, Singapore, Malaysia, the UK, North America, Australia and more. Companies with their own website are added as accounts and scanned; the rest go to the review list.</p>
         </div>
         <Link className="btn" href="/leads/review">Review list ({toReview})</Link>
       </div>
@@ -86,7 +85,7 @@ export default async function FindLeads({ searchParams }: { searchParams: Promis
             {saved.map((s) => (
               <tr key={s.id}>
                 <td>{SOURCE_LABEL[s.source as SourceId]}</td>
-                <td>{s.keywords || s.industry} · {s.city}{s.staffRange ? ` · ${s.staffRange.replace(",", "-")} staff` : ""}</td>
+                <td>{s.keywords || s.industry} · {s.city}{s.country !== "IN" ? `, ${countryName(s.country)}` : ""}{s.staffRange ? ` · ${s.staffRange.replace(",", "-")} staff` : ""}</td>
                 <td className="faint">{s.lastRunAt ? `last run ${day(s.lastRunAt)}` : "not run yet"}</td>
                 <td className="row" style={{ justifyContent: "flex-end" }}>
                   <form action={toggleSaved}><input type="hidden" name="id" value={s.id} /><button className="btn btn-sm">{s.active ? "Pause" : "Resume"}</button></form>

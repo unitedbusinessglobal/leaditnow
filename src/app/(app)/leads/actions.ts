@@ -9,6 +9,7 @@ import { runDiscovery } from "@/discovery/ingest";
 import type { SourceId } from "@/discovery/types";
 import { upsertAccount, recomputeScores, scanAndSave } from "@/domain/accounts";
 import { revealApolloPerson } from "@/discovery/apollo";
+import { isMarket } from "@/discovery/markets";
 
 const SOURCES: SourceId[] = ["osm", "wikidata", "google-places", "apollo"];
 const go = (path: string, kind: "ok" | "error", msg: string): never => redirect(`${path}?${kind}=${encodeURIComponent(msg)}`);
@@ -18,6 +19,7 @@ function input(fd: FormData) {
   return {
     industry: str(fd.get("industry")),
     city: str(fd.get("city")),
+    country: isMarket(str(fd.get("country"))) ? str(fd.get("country")).toUpperCase() : "IN",
     keywords: str(fd.get("keywords")) || null,
     staffRange: /^\d+,\d+$/.test(staffRange) ? staffRange : null,
   };
@@ -65,7 +67,7 @@ export async function addCandidate(fd: FormData) {
   let res: Awaited<ReturnType<typeof upsertAccount>>;
   try {
     res = await upsertAccount(db, user.orgId, {
-      domain: website, name: c!.name, city: c!.city, industry: c!.industry, staffSize: c!.staffSize, phone: c!.phone,
+      domain: website, name: c!.name, city: c!.city, country: c!.country, industry: c!.industry, staffSize: c!.staffSize, phone: c!.phone,
       ownerId: null, source: c!.source, sourceNote: c!.note,
     });
   } catch (e) {

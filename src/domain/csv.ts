@@ -1,4 +1,5 @@
 import type { PrismaClient } from "@prisma/client";
+import { isMarket, guessCountry } from "@/discovery/markets";
 import { normaliseDomain } from "@/signals/scan";
 import { normalisePhone, upsertAccount } from "./accounts";
 import type { Field, ImportResult } from "./csv-parse";
@@ -73,7 +74,10 @@ export async function importRows(
     for (const [f, idx] of Object.entries(mapping)) if (idx != null && idx >= 0) r[f as Field] = (body[i][idx] ?? "").trim();
     if (r.status && !/^(active|live|activ)/i.test(r.status)) { res.skipped.push({ line, reason: `Status: ${r.status}` }); continue; }
     const domain = domainFrom(r);
-    const phone = normalisePhone(r.phone || r.contactPhone);
+    // Country: a two-letter code, a country name ("United Arab Emirates", "UK"), or worked out from the city.
+    const cc = (r.country && (isMarket(r.country) ? r.country.toUpperCase() : guessCountry(r.country))) || guessCountry(r.city) || null;
+    const country = cc && cc !== "IN" ? cc : null;
+    const phone = normalisePhone(r.phone || r.contactPhone, country);
     if (!domain && !phone && !r.name) { res.skipped.push({ line, reason: "No company name, website or phone" }); continue; }
 
     let account = domain ? await db.account.findUnique({ where: { orgId_domain: { orgId, domain } } }) : null;
@@ -90,7 +94,7 @@ export async function importRows(
           await db.leadCandidate.create({
             data: {
               extra: registerDetails(r) ?? undefined,
-              orgId, source, externalId, name: r.name, city: r.city || null, phone: r.phone || r.contactPhone || null,
+              orgId, source, externalId, name: r.name, city: r.city || null, country, phone: r.phone || r.contactPhone || null,
               industry: r.industry || null, staffSize: staff(r.staffSize), note: `Imported from ${opts.sourceName}${r.externalId ? ` (${r.externalId})` : ""}`,
             },
           });
@@ -99,7 +103,7 @@ export async function importRows(
         continue;
       }
       const up = await upsertAccount(db, orgId, {
-        domain, name: r.name, city: r.city, industry: r.industry, staffSize: staff(r.staffSize), phone: r.phone || r.contactPhone,
+        domain, name: r.name, city: r.city, country, industry: r.industry, staffSize: staff(r.staffSize), phone: r.phone || r.contactPhone,
         ownerId: opts.ownerId, source: `csv:${opts.sourceName}`, sourceNote: `Imported from ${opts.sourceName}`,
       });
       account = up.account;
@@ -120,6 +124,7 @@ export async function importRows(
         where: { id: account.id },
         data: {
           city: account.city ?? (r.city || null),
+          country: account.country ?? country,
           industry: account.industry ?? (r.industry || null),
           staffSize: account.staffSize ?? staff(r.staffSize),
           phone: account.phone ?? phone,

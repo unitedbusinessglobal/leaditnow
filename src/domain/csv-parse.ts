@@ -27,7 +27,7 @@ export function parseCsv(text: string): string[][] {
   return rows;
 }
 
-export type Field = "name" | "domain" | "city" | "industry" | "staffSize" | "phone" | "contactName" | "contactTitle" | "contactEmail" | "contactPhone" | "externalId" | "status" | "paidUpCapital" | "listed" | "companyClass" | "revenue";
+export type Field = "name" | "domain" | "city" | "country" | "industry" | "staffSize" | "phone" | "contactName" | "contactTitle" | "contactEmail" | "contactPhone" | "externalId" | "status" | "paidUpCapital" | "listed" | "companyClass" | "revenue";
 
 /** Header guesses for Apollo, HubSpot and hand-made sheets. */
 const HEADER_HINTS: Record<Field, RegExp> = {
@@ -40,6 +40,7 @@ const HEADER_HINTS: Record<Field, RegExp> = {
   companyClass: /^(company class|class of company|class)$/i,
   revenue: /^(revenue|annual revenue|turnover|annual turnover)( \(inr\)| inr)?$/i,
   city: /^(city|company city|location|town)$/i,
+  country: /^(country|company country|nation)$/i,
   industry: /^(industry|sector|category|vertical)$/i,
   staffSize: /(employees|# employees|staff|headcount|company size|number of employees)/i,
   phone: /^(company phone|phone|telephone|office phone|mobile)$/i,
@@ -51,7 +52,7 @@ const HEADER_HINTS: Record<Field, RegExp> = {
 
 export function guessMapping(headers: string[]): Partial<Record<Field, number>> {
   const map: Partial<Record<Field, number>> = {};
-  const order: Field[] = ["externalId", "status", "paidUpCapital", "listed", "companyClass", "revenue", "domain", "name", "city", "industry", "staffSize", "contactPhone", "phone", "contactEmail", "contactTitle", "contactName"];
+  const order: Field[] = ["externalId", "status", "paidUpCapital", "listed", "companyClass", "revenue", "domain", "name", "city", "country", "industry", "staffSize", "contactPhone", "phone", "contactEmail", "contactTitle", "contactName"];
   for (const f of order) {
     const idx = headers.findIndex((h, i) => HEADER_HINTS[f].test(h.trim().replace(/[_]+/g, " ")) && !Object.values(map).includes(i));
     if (idx >= 0) map[f] = idx;

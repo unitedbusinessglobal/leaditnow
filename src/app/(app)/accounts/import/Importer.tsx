@@ -9,6 +9,7 @@ const FIELDS: { id: Field; label: string }[] = [
   { id: "domain", label: "Website / domain" },
   { id: "name", label: "Company name" },
   { id: "city", label: "City" },
+  { id: "country", label: "Country" },
   { id: "industry", label: "Industry" },
   { id: "staffSize", label: "Staff size" },
   { id: "phone", label: "Company phone" },

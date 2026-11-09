@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { isMarket, guessCountry } from "@/discovery/markets";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireCan } from "@/lib/session";
@@ -8,7 +9,7 @@ import { audit } from "@/lib/audit";
 import { str, intOrNull } from "@/lib/format";
 import { upsertAccount, scanAndSave, addManualSignal, recomputeScores } from "@/domain/accounts";
 import { importRows, rupees, type Field } from "@/domain/csv";
-import { enrichAccount, apolloReady, APOLLO_MISSING } from "@/domain/enrich";
+import { enrichAccount, enrichReady, ENRICH_MISSING, findEmails, EMAILS_MISSING, emailsReady } from "@/domain/enrich";
 import { SERVICE_LINES } from "@/domain/deals";
 
 const back = (id: string, msg: string, kind: "ok" | "error" = "ok") =>
@@ -31,6 +32,7 @@ export async function createAccount(fd: FormData) {
       industry: str(fd.get("industry")),
       staffSize: intOrNull(fd.get("staffSize")),
       phone: str(fd.get("phone")),
+      country: guessCountry(str(fd.get("city"))),
       // Someone who adds a company by hand works it themselves.
       ownerId: user.id,
       teamId: user.teamId,
@@ -66,6 +68,7 @@ export async function updateAccount(fd: FormData) {
     where: { id },
     data: {
       name: str(fd.get("name")) || undefined,
+      country: isMarket(str(fd.get("country"))) && str(fd.get("country")) !== "IN" ? str(fd.get("country")) : null,
       city: str(fd.get("city")) || null,
       industry: str(fd.get("industry")) || null,
       staffSize: intOrNull(fd.get("staffSize")),
@@ -209,31 +212,47 @@ export async function updateFinance(fd: FormData) {
 export async function enrichOne(fd: FormData) {
   const user = await requireCan("leads.find");
   const a = await ownAccount(user.orgId, str(fd.get("id")));
-  let status: Awaited<ReturnType<typeof enrichAccount>>;
+  let r: Awaited<ReturnType<typeof enrichAccount>>;
   try {
-    status = await enrichAccount(db, a);
+    r = await enrichAccount(db, a);
   } catch (e) {
-    back(a.id, (e as Error).message, "error");
+    back(a.id, `No source could look this up: ${(e as Error).message}`, "error");
   }
-  if (status! === "not-connected") back(a.id, APOLLO_MISSING, "error");
+  if (r!.status === "not-connected") back(a.id, ENRICH_MISSING, "error");
   await recomputeScores(db, a.id);
-  await audit(user.orgId, user.id, "Account", a.id, "apollo-enrich", { status: status! });
-  back(a.id, status! === "done" ? "Updated from Apollo." : `Apollo has no company record for ${a.domain}. Enter what you know by hand.`);
+  await audit(user.orgId, user.id, "Account", a.id, "enrich", { ...r! });
+  const skipped = r!.errors.length ? ` Skipped: ${r!.errors.join("; ")}.` : "";
+  back(a.id, r!.status === "done" ? `Updated from ${r!.used.join(" and ")}.${skipped}` : `No source has a company record for ${a.domain}. Enter what you know by hand.${skipped}`);
 }
 
 export async function enrichBatch() {
   const user = await requireCan("leads.find");
-  if (!apolloReady()) redirect(`/accounts?error=${encodeURIComponent(APOLLO_MISSING)}`);
+  if (!enrichReady()) redirect(`/accounts?error=${encodeURIComponent(ENRICH_MISSING)}`);
   const batch = await db.account.findMany({ where: { orgId: user.orgId, enrichedAt: null }, orderBy: [{ priority: "desc" }], take: 20 });
   let done = 0, missing = 0, failed = 0;
+  const errors = new Set<string>();
   for (const a of batch) {
     try {
-      const s = await enrichAccount(db, a);
-      if (s === "done") { done++; await recomputeScores(db, a.id); } else missing++;
-    } catch { failed++; }
+      const r = await enrichAccount(db, a);
+      r.errors.forEach((e) => errors.add(e));
+      if (r.status === "done") { done++; await recomputeScores(db, a.id); } else missing++;
+    } catch (e) { failed++; errors.add((e as Error).message); }
   }
   const left = await db.account.count({ where: { orgId: user.orgId, enrichedAt: null } });
-  redirect(`/accounts?ok=${encodeURIComponent(`Enriched ${done}; Apollo had no record for ${missing}${failed ? `; ${failed} failed` : ""}. ${left} not yet enriched.`)}`);
+  const msg = `Enriched ${done}; no record for ${missing}${failed ? `; ${failed} failed` : ""}. ${left} not yet enriched.${errors.size ? ` Problems: ${[...errors].slice(0, 3).join("; ")}` : ""}`;
+  redirect(`/accounts?${done || missing ? "ok" : "error"}=${encodeURIComponent(msg)}`);
+}
+
+/** Look up work emails on the company's domain (Hunter, Snov.io) and keep them under contact details. */
+export async function findEmailsOne(fd: FormData) {
+  const user = await requireCan("leads.find");
+  const a = await ownAccount(user.orgId, str(fd.get("id")));
+  if (!emailsReady()) back(a.id, EMAILS_MISSING, "error");
+  const r = await findEmails(db, a);
+  await audit(user.orgId, user.id, "Account", a.id, "find-emails", { ...r });
+  const skipped = r.errors.length ? ` Skipped: ${r.errors.join("; ")}.` : "";
+  if (r.used.length === 0) back(a.id, `No source could look this up.${skipped}`, "error");
+  back(a.id, r.added ? `${r.added} new ${r.added === 1 ? "email" : "emails"} from ${r.used.join(" and ")}.${skipped}` : `No new emails found for ${a.domain}.${skipped}`);
 }
 
 export async function addContactFromPoint(fd: FormData) {
@@ -243,12 +262,12 @@ export async function addContactFromPoint(fd: FormData) {
   const p = await db.contactPoint.findFirst({ where: { id: str(fd.get("pointId")), accountId: id } });
   if (!p) back(id, "Not found.", "error");
   const local = p!.kind === "email" ? p!.value.split("@")[0] : "";
-  const name = str(fd.get("name")) || (p!.kind === "email" ? `${local.charAt(0).toUpperCase()}${local.slice(1)} (general)` : "Office");
+  const name = str(fd.get("name")) || p!.name || (p!.kind === "email" ? `${local.charAt(0).toUpperCase()}${local.slice(1)} (general)` : "Office");
   await db.contact.create({
     data: {
-      orgId: user.orgId, accountId: id, name, title: str(fd.get("title")) || null,
+      orgId: user.orgId, accountId: id, name, title: str(fd.get("title")) || p!.title || null,
       email: p!.kind === "email" ? p!.value : null, phone: p!.kind === "phone" ? p!.value : null,
-      consentSource: `Published on the company website: ${p!.sourceUrl}`,
+      consentSource: p!.source === "website" ? `Published on the company website: ${p!.sourceUrl}` : `Business email found by ${p!.sourceUrl}`,
     },
   });
   await recomputeScores(db, id);

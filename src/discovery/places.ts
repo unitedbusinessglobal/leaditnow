@@ -1,4 +1,5 @@
 import type { Fetch, Found, SearchInput } from "./types";
+import { market } from "./markets";
 
 const FIELDS = [
   "places.id", "places.displayName", "places.formattedAddress", "places.websiteUri",
@@ -16,7 +17,10 @@ interface Place {
 }
 
 export function placesQuery(i: SearchInput): string {
-  return `${i.keywords?.trim() || i.industry} in ${i.city}, Tamil Nadu, India`;
+  const m = market(i.country);
+  const tn = m.code === "IN" && market("IN").cities.slice(0, 10).includes(i.city) ? "Tamil Nadu, " : "";
+  const where = i.city.toLowerCase() === m.name.toLowerCase() ? i.city : `${i.city}, ${tn}${m.name}`;
+  return `${i.keywords?.trim() || i.industry} in ${where}`;
 }
 
 /** Google Places API (New) Text Search: up to 3 pages of 20. Bills at the Enterprise tier (website and phone). */
@@ -28,7 +32,7 @@ export async function searchPlaces(i: SearchInput, apiKey: string, f: Fetch = fe
     const res = await f("https://places.googleapis.com/v1/places:searchText", {
       method: "POST",
       headers: { "content-type": "application/json", "X-Goog-Api-Key": apiKey, "X-Goog-FieldMask": FIELDS },
-      body: JSON.stringify({ textQuery: placesQuery(i), regionCode: "IN", languageCode: "en", pageSize: 20, ...(pageToken ? { pageToken } : {}) }),
+      body: JSON.stringify({ textQuery: placesQuery(i), regionCode: market(i.country).code, languageCode: "en", pageSize: 20, ...(pageToken ? { pageToken } : {}) }),
     });
     const body = (await res.json()) as { places?: Place[]; nextPageToken?: string; error?: { message?: string } };
     if (!res.ok) throw new Error(`Google Places: ${body.error?.message ?? res.status}`);
@@ -37,7 +41,7 @@ export async function searchPlaces(i: SearchInput, apiKey: string, f: Fetch = fe
       const city = p.addressComponents?.find((c) => c.types?.includes("locality"))?.longText ?? i.city;
       out.push({
         source: "google-places", externalId: p.id, name: p.displayName?.text ?? "Unnamed", website: p.websiteUri ?? null,
-        phone: p.nationalPhoneNumber ?? null, city, address: p.formattedAddress ?? null, industry: i.industry,
+        phone: p.nationalPhoneNumber ?? null, city, country: market(i.country).code, address: p.formattedAddress ?? null, industry: i.industry,
       });
     }
     pageToken = body.nextPageToken;

@@ -6,6 +6,7 @@ import { searchPlaces, placesQuery } from "./places";
 import { searchApolloCompanies } from "./apollo";
 import { searchOsm } from "./osm";
 import { searchWikidata } from "./wikidata";
+import { countryName } from "./markets";
 
 export interface IngestResult { found: number; added: number; existing: number; candidates: number; accountIds: string[] }
 
@@ -17,7 +18,7 @@ export async function ingest(db: PrismaClient, orgId: string, found: Found[], op
   const r: IngestResult = { found: found.length, added: 0, existing: 0, candidates: 0, accountIds: [] };
   for (const f of found) {
     const domain = ownDomain(f.website);
-    const phone = normalisePhone(f.phone);
+    const phone = normalisePhone(f.phone, f.country);
     let account = domain ? await db.account.findUnique({ where: { orgId_domain: { orgId, domain } } }) : null;
     if (!account && phone) account = await db.account.findFirst({ where: { orgId, phone } });
     if (!account && f.source === "google-places") account = await db.account.findFirst({ where: { orgId, placeId: f.externalId } });
@@ -32,6 +33,7 @@ export async function ingest(db: PrismaClient, orgId: string, found: Found[], op
           apolloId: account.apolloId ?? (f.source === "apollo" ? f.externalId : null),
           staffSize: account.staffSize ?? f.staffSize ?? null,
           city: account.city ?? f.city ?? null,
+          country: account.country ?? (f.country && f.country !== "IN" ? f.country : null),
         },
       });
       await db.leadCandidate.updateMany({ where: { orgId, source: f.source, externalId: f.externalId, status: "NEW" }, data: { status: "ADDED", accountId: account.id } });
@@ -39,7 +41,7 @@ export async function ingest(db: PrismaClient, orgId: string, found: Found[], op
     }
     if (domain) {
       const { account: a } = await upsertAccount(db, orgId, {
-        domain, name: f.name, city: f.city, industry: f.industry, staffSize: f.staffSize, phone: f.phone, ownerId: opts.ownerId,
+        domain, name: f.name, city: f.city, country: f.country, industry: f.industry, staffSize: f.staffSize, phone: f.phone, ownerId: opts.ownerId,
         source: f.source, sourceNote: `${SOURCE_LABEL[f.source]}: ${opts.query}`,
       });
       await db.account.update({
@@ -55,7 +57,7 @@ export async function ingest(db: PrismaClient, orgId: string, found: Found[], op
     if (existed) { r.existing++; continue; }
     await db.leadCandidate.create({
       data: {
-        orgId, source: f.source, externalId: f.externalId, name: f.name, city: f.city ?? null, address: f.address ?? null,
+        orgId, source: f.source, externalId: f.externalId, name: f.name, city: f.city ?? null, country: f.country && f.country !== "IN" ? f.country : null, address: f.address ?? null,
         phone: f.phone ?? null, website: f.website ?? null, industry: f.industry ?? null, staffSize: f.staffSize ?? null,
         note: `${SOURCE_LABEL[f.source]}: ${opts.query}`,
       },
@@ -67,7 +69,7 @@ export async function ingest(db: PrismaClient, orgId: string, found: Found[], op
 
 export function describe(source: SourceId, i: SearchInput): string {
   if (source === "google-places") return placesQuery(i);
-  const parts = [i.keywords?.trim() || i.industry, i.city];
+  const parts = [i.keywords?.trim() || i.industry, i.country && i.country !== "IN" ? `${i.city}, ${countryName(i.country)}` : i.city];
   if (source === "apollo" && i.staffRange) parts.push(`${i.staffRange.replace(",", "-")} staff`);
   return parts.join(" · ");
 }

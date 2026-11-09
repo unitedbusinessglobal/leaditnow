@@ -1,7 +1,28 @@
 /**
  * Business contact details a company publishes on its own website: emails (text and mailto:) and
- * phone numbers (tel: links and Indian formats in visible text). Each keeps the page it came from.
+ * phone numbers (tel: links, international numbers, and Indian or the site's national formats in visible text).
+ * Each keeps the page it came from.
  */
+import { normaliseIntlPhone } from "@/discovery/markets";
+
+/** Country from the website's domain ending: example.ae -> AE, example.co.uk -> GB. India and .com give null. */
+export function countryFromDomain(domain: string): string | null {
+  const tld = domain.toLowerCase().split(".").pop() ?? "";
+  const map: Record<string, string> = { ae: "AE", sa: "SA", qa: "QA", om: "OM", kw: "KW", bh: "BH", sg: "SG", my: "MY", uk: "GB", ie: "IE", ca: "CA", au: "AU", nz: "NZ", za: "ZA", ke: "KE", us: "US" };
+  return map[tld] ?? null;
+}
+
+/** Any phone: international numbers keep their country code; national ones are read as the site's country (India by default). */
+export function normaliseAnyPhone(raw: string, country: string | null): string | null {
+  const t = raw.trim();
+  if (/^(\+|00)/.test(t) && !/^(\+|00)\s*91/.test(t)) return normaliseIntlPhone(t, null);
+  if (country && country !== "IN") {
+    const d = t.replace(/\D/g, "");
+    if (d.length < 7 || d.length > 13 || /^(\d)\1+$/.test(d)) return null;
+    return normaliseIntlPhone(t, country);
+  }
+  return normaliseIndianPhone(t);
+}
 export interface FoundContact { kind: "email" | "phone"; value: string; sourceUrl: string }
 
 const EMAIL = /[A-Z0-9._%+-]{1,64}@[A-Z0-9.-]+\.[A-Z]{2,24}/gi;
@@ -31,6 +52,7 @@ export function normaliseIndianPhone(raw: string): string | null {
 }
 
 export function extractContacts(pages: { url: string; html: string }[], domain: string): FoundContact[] {
+  const country = countryFromDomain(domain);
   const out = new Map<string, FoundContact>();
   const add = (c: FoundContact) => { const k = `${c.kind}:${c.value}`; if (!out.has(k)) out.set(k, c); };
   for (const p of pages) {
@@ -40,7 +62,7 @@ export function extractContacts(pages: { url: string; html: string }[], domain: 
       EMAIL.lastIndex = 0;
     }
     for (const m of p.html.matchAll(/tel:([+\d\s().-]{8,20})/gi)) {
-      const ph = normaliseIndianPhone(m[1]);
+      const ph = normaliseAnyPhone(m[1], country);
       if (ph) add({ kind: "phone", value: ph, sourceUrl: p.url });
     }
     const text = visibleText(p.html);
@@ -50,7 +72,7 @@ export function extractContacts(pages: { url: string; html: string }[], domain: 
     }
     // Phone numbers only near a phone cue, to avoid catching order numbers and prices.
     for (const cue of text.matchAll(/(phone|tel|mobile|mob|call|contact|whatsapp|ph\.?|☎|📞)[^0-9+]{0,15}([+0(][\d\s()+-]{8,20}|\d[\d\s-]{8,16})/gi)) {
-      const ph = normaliseIndianPhone(cue[2]);
+      const ph = normaliseAnyPhone(cue[2], country);
       if (ph) add({ kind: "phone", value: ph, sourceUrl: p.url });
     }
   }

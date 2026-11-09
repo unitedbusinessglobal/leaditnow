@@ -14,7 +14,7 @@ export async function GET(req: Request) {
   if (process.env.VERCEL_ENV === "production") return new NextResponse("Not found", { status: 404 });
   const q = new URL(req.url).searchParams;
   const source = (q.get("source") ?? "osm") as SourceId;
-  const i = { industry: q.get("industry") ?? "Manufacturing", city: q.get("city") ?? "Chennai", keywords: q.get("keywords"), limit: 25 };
+  const i = { industry: q.get("industry") ?? "Manufacturing", city: q.get("city") ?? "Chennai", country: q.get("country") ?? "IN", keywords: q.get("keywords"), limit: 25 };
   try {
     const found = await runSource(source, i);
     return NextResponse.json({

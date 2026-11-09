@@ -6,7 +6,9 @@ import { can } from "@/lib/roles";
 import { day } from "@/lib/format";
 import { Flash } from "@/components/Flash";
 import { scanPending, enrichBatch } from "./actions";
-import { apolloReady } from "@/domain/enrich";
+import { enrichReady } from "@/domain/enrich";
+import { MARKETS, countryName } from "@/discovery/markets";
+import { readyProviders } from "@/enrich/providers";
 import { inrShort } from "@/domain/estimate";
 import { SubmitButton } from "@/components/SubmitButton";
 import { assignMany } from "./assign-actions";
@@ -14,7 +16,7 @@ import { actorFor, assignOptions, loadTeams, stageWhere, STAGE_LABEL, STAGES, ty
 
 export const maxDuration = 120;
 
-type SP = { q?: string; need?: string; hint?: string; owner?: string; status?: string; team?: string; sort?: string; page?: string; ok?: string; error?: string };
+type SP = { q?: string; country?: string; need?: string; hint?: string; owner?: string; status?: string; team?: string; sort?: string; page?: string; ok?: string; error?: string };
 
 const SORTS: Record<string, Prisma.AccountOrderByWithRelationInput[]> = {
   priority: [{ priority: "desc" }, { needScore: "desc" }],
@@ -29,6 +31,8 @@ export default async function Accounts({ searchParams }: { searchParams: Promise
   const user = await requireUser();
   const sp = await searchParams;
   const where: Prisma.AccountWhereInput = { orgId: user.orgId };
+  if (sp.country === "IN") where.country = null;
+  else if (sp.country) where.country = sp.country;
   if (sp.q) where.OR = [{ name: { contains: sp.q, mode: "insensitive" } }, { domain: { contains: sp.q.toLowerCase() } }, { city: { contains: sp.q, mode: "insensitive" } }];
   if (sp.need) where.needLabel = sp.need;
   if (sp.hint) where.serviceHint = sp.hint;
@@ -38,7 +42,8 @@ export default async function Accounts({ searchParams }: { searchParams: Promise
   const status = STAGES.includes(sp.status as Stage) ? (sp.status as Stage) : null;
   if (status) where.AND = [stageWhere(status)];
   const page = Math.max(1, Number(sp.page) || 1);
-  const apollo = apolloReady();
+  const apollo = enrichReady();
+  const sourceNames = readyProviders().filter((p) => p.company).map((p) => p.label).join(", ");
   const [accounts, total, hints, unscanned, unenriched] = await Promise.all([
     db.account.findMany({
       where, orderBy: SORTS[sp.sort ?? "priority"] ?? SORTS.priority, take: PAGE, skip: (page - 1) * PAGE,
@@ -78,14 +83,18 @@ export default async function Accounts({ searchParams }: { searchParams: Promise
       )}
       {can(user.role, "leads.find") && unenriched > 0 && (apollo ? (
         <form action={enrichBatch} className="notice row" style={{ justifyContent: "space-between" }}>
-          <span>{unenriched} {unenriched === 1 ? "account has" : "accounts have"} no size or revenue details from Apollo yet.</span>
-          <SubmitButton className="btn btn-sm" pending="Asking Apollo…">Enrich next 20</SubmitButton>
+          <span>{unenriched} {unenriched === 1 ? "account has" : "accounts have"} no size or revenue details yet. Enriching uses {sourceNames} credits, highest priority first.</span>
+          <SubmitButton className="btn btn-sm" pending="Looking them up…">Enrich next 20</SubmitButton>
         </form>
       ) : (
-        <p className="faint" style={{ margin: 0 }}>Revenue and staff come from Apollo once it is connected. Until then, enter them on each account under Size and finance.</p>
+        <p className="faint" style={{ margin: 0 }}>Revenue and staff are filled automatically once a data source (People Data Labs, Hunter, Apollo…) is connected. Until then, enter them on each account under Size and finance.</p>
       ))}
       <form className="card row" method="get">
         <input name="q" defaultValue={sp.q} placeholder="Search name, domain or city" style={{ flex: 1, minWidth: 200 }} />
+        <select name="country" defaultValue={sp.country ?? ""}>
+          <option value="">All countries</option>
+          {MARKETS.map((m) => <option key={m.code} value={m.code}>{m.name}</option>)}
+        </select>
         <select name="need" defaultValue={sp.need ?? ""}>
           <option value="">Any need</option>
           {["High", "Medium", "Low", "None"].map((n) => <option key={n}>{n}</option>)}
@@ -142,7 +151,7 @@ export default async function Accounts({ searchParams }: { searchParams: Promise
                 <td className="num"><strong>{a.priority}</strong></td>
                 <td>{a.serviceHint ?? <span className="faint">—</span>}</td>
                 <td className="faint">{[a.staffSize ? `${a.staffSize} staff` : null, a.revenueInr ? inrShort(a.revenueInr) : null, a.listed ? `Listed${a.stockSymbol ? ` ${a.stockSymbol}` : ""}` : null].filter(Boolean).join(" · ") || "—"}</td>
-                <td>{a.city ?? <span className="faint">—</span>}</td>
+                <td>{a.city ?? <span className="faint">—</span>}{a.country && <span className="faint">, {countryName(a.country)}</span>}</td>
                 <td>
                   {a.owner ? a.owner.name : a.team ? <span className="faint">{a.team.name} queue</span> : <span className="faint">Unassigned</span>}
                   {!a.ownerId && a.teamId && a.teamId === user.teamId && (

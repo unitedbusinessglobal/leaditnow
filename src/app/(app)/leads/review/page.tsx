@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { countryName } from "@/discovery/markets";
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/session";
@@ -50,7 +51,7 @@ export default async function Review({ searchParams }: { searchParams: Promise<{
                     {c.website && <> · <a href={c.website} target="_blank" rel="noreferrer">listed page</a></>}
                   </div>
                 </td>
-                <td className="faint">{[c.city, c.industry, c.staffSize ? `${c.staffSize} staff` : null, c.phone].filter(Boolean).join(" · ")}{c.address && <div>{c.address}</div>}</td>
+                <td className="faint">{[c.city, c.country ? countryName(c.country) : null, c.industry, c.staffSize ? `${c.staffSize} staff` : null, c.phone].filter(Boolean).join(" · ")}{c.address && <div>{c.address}</div>}</td>
                 <td className="faint">{label(c.source)}<div>{day(c.createdAt)}</div></td>
                 <td>
                   {edit ? (
