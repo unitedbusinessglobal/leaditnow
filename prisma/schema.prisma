@@ -141,6 +141,7 @@ model Account {
   gstin      String?
   industry   String?
   city       String?
+  country    String? // ISO 3166 two-letter code; empty means India (the first market)
   staffSize  Int?
   phone      String?
   source     String          @default("manual") // manual | csv:<file> | hubspot | apollo
@@ -389,6 +390,7 @@ model LeadCandidate {
   externalId String? // Places ID, Apollo ID or CIN
   name       String
   city       String?
+  country    String?
   address    String?
   phone      String?
   website    String? // a social or marketplace page, not the company's own site
@@ -411,6 +413,7 @@ model SavedSearch {
   source      String // google-places | apollo
   industry    String
   city        String
+  country     String   @default("IN")
   keywords    String?
   staffRange  String? // Apollo, e.g. "11,200"
   active      Boolean   @default(true)
