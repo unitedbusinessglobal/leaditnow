@@ -447,6 +447,10 @@ model ContactPoint {
   kind      String // email | phone
   value     String
   sourceUrl String
+  source    String   @default("website") // website | hunter | snov | ...
+  name      String? // person behind the email, when the provider knows
+  title     String?
+  confidence Int?
   foundAt   DateTime @default(now())
 
   @@unique([accountId, kind, value])
