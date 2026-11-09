@@ -3,14 +3,20 @@ import { normaliseDomain, scanDomain, type ScanResult } from "@/signals/scan";
 import { manualSignal, RULES } from "@/signals/rules";
 import { needScore, fitScore, priority } from "@/signals/score";
 import type { SignalMatch } from "@/signals/rules";
+import { normaliseIntlPhone } from "@/discovery/markets";
 
 const DECISION_MAKER = /\b(owner|founder|co-?founder|director|ceo|cto|cfo|coo|md|managing|proprietor|partner|head|gm|general manager|president|vp)\b/i;
 
-/** Indian numbers compare on their last 10 digits (drops +91, 0 and spacing). */
-export function normalisePhone(raw?: string | null): string | null {
+/**
+ * Indian numbers compare on their last 10 digits (drops +91, 0 and spacing).
+ * Numbers in other countries keep their international form ("+971 4 123 4567").
+ */
+export function normalisePhone(raw?: string | null, country?: string | null): string | null {
   if (!raw) return null;
   const digits = raw.replace(/\D/g, "");
   if (digits.length < 8) return null;
+  const intl = /^\s*(\+|00)/.test(raw) && !/^\s*(\+|00)\s*91/.test(raw);
+  if ((country && country !== "IN") || intl) return normaliseIntlPhone(raw, country && country !== "IN" ? country : null) ?? digits.slice(-10);
   return digits.slice(-10);
 }
 
@@ -28,6 +34,7 @@ export interface NewAccount {
   phone?: string | null;
   ownerId?: string | null;
   teamId?: string | null;
+  country?: string | null;
   source?: string;
   sourceNote?: string | null;
 }
@@ -45,9 +52,10 @@ export async function upsertAccount(db: PrismaClient, orgId: string, a: NewAccou
       city: a.city?.trim() || null,
       industry: a.industry?.trim() || null,
       staffSize: a.staffSize ?? null,
-      phone: normalisePhone(a.phone),
+      phone: normalisePhone(a.phone, a.country),
       ownerId: a.ownerId ?? null,
       teamId: a.teamId ?? null,
+      country: a.country && a.country !== "IN" ? a.country : null,
       assignedAt: a.ownerId || a.teamId ? new Date() : null,
       source: a.source ?? "manual",
       sourceNote: a.sourceNote ?? null,
@@ -169,6 +177,6 @@ export async function saveContactPoints(db: PrismaClient, account: Account, foun
     skipDuplicates: true,
   });
   const phone = found.find((c) => c.kind === "phone");
-  if (!account.phone && phone) await db.account.update({ where: { id: account.id }, data: { phone: normalisePhone(phone.value) } });
+  if (!account.phone && phone) await db.account.update({ where: { id: account.id }, data: { phone: normalisePhone(phone.value, account.country) } });
   return res.count;
 }

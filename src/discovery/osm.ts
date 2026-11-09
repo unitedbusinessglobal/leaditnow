@@ -1,4 +1,5 @@
 import { UA, type Fetch, type Found, type SearchInput } from "./types";
+import { market } from "./markets";
 
 /**
  * OpenStreetMap tag filters per industry. Data © OpenStreetMap contributors, ODbL:
@@ -24,7 +25,10 @@ export function overpassQuery(i: SearchInput): string {
   const name = i.keywords?.trim() ? `["name"~"${i.keywords.trim().replace(/["\\]/g, "")}",i]` : "";
   const city = i.city.replace(/["\\]/g, "");
   const parts = filters.map((t) => `  nwr(area.city)${t}["website"]${name};\n  nwr(area.city)${t}["contact:website"]${name};`).join("\n");
-  return `[out:json][timeout:60];\narea["name"="${city}"]["boundary"="administrative"]->.city;\n(\n${parts}\n);\nout center tags ${Math.min(i.limit ?? 150, 300)};`;
+  // The city is looked up inside its country (English or local name), so "Birmingham" means the one in the chosen country.
+  const cc = market(i.country).code;
+  const area = `area["ISO3166-1"="${cc}"][admin_level=2]->.country;\nrel["boundary"="administrative"][~"^name(:en)?$"~"^${city}$",i](area.country);\nmap_to_area->.city;`;
+  return `[out:json][timeout:60];\n${area}\n(\n${parts}\n);\nout center tags ${Math.min(i.limit ?? 150, 300)};`;
 }
 
 interface Element { type: string; id: number; tags?: Record<string, string> }
@@ -41,7 +45,7 @@ export function parseOverpass(json: { elements?: Element[] }, i: SearchInput): F
     const addr = [t["addr:housenumber"], t["addr:street"], t["addr:suburb"], t["addr:city"], t["addr:postcode"]].filter(Boolean).join(", ");
     out.push({
       source: "osm", externalId: key, name: t["name:en"] || t.name, website: t.website || t["contact:website"] || null,
-      phone: t.phone || t["contact:phone"] || t["contact:mobile"] || null, city: t["addr:city"] || i.city, address: addr || null, industry: i.industry,
+      phone: t.phone || t["contact:phone"] || t["contact:mobile"] || null, city: t["addr:city"] || i.city, country: market(i.country).code, address: addr || null, industry: i.industry,
     });
   }
   return out;

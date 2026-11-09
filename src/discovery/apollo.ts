@@ -1,4 +1,5 @@
 import type { Fetch, Found, SearchInput } from "./types";
+import { countryName, market } from "./markets";
 
 const BASE = "https://api.apollo.io/api/v1";
 
@@ -35,7 +36,7 @@ export async function searchApolloCompanies(i: SearchInput, apiKey: string, f: F
     const body = await call<{ organizations?: ApolloOrg[]; accounts?: ApolloOrg[]; pagination?: { total_pages?: number } }>(
       "/mixed_companies/search",
       {
-        organization_locations: [`${i.city}, India`],
+        organization_locations: [`${i.city}, ${countryName(i.country)}`],
         q_organization_keyword_tags: keywords,
         organization_num_employees_ranges: [i.staffRange || "11,500"],
         page, per_page: 100,
@@ -47,7 +48,7 @@ export async function searchApolloCompanies(i: SearchInput, apiKey: string, f: F
       out.push({
         source: "apollo", externalId: o.id, name: o.name ?? "Unnamed",
         website: o.website_url ?? (o.primary_domain ? `https://${o.primary_domain}` : null),
-        phone: o.primary_phone?.number ?? o.phone ?? null, city: o.city ?? i.city, address: o.raw_address ?? null,
+        phone: o.primary_phone?.number ?? o.phone ?? null, city: o.city ?? i.city, country: market(i.country).code, address: o.raw_address ?? null,
         industry: o.industry ?? i.industry, staffSize: o.estimated_num_employees ?? null,
       });
     }

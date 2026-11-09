@@ -15,6 +15,7 @@ export interface Found {
   website?: string | null;
   phone?: string | null;
   city?: string | null;
+  country?: string | null;
   address?: string | null;
   industry?: string | null;
   staffSize?: number | null;
@@ -23,6 +24,7 @@ export interface Found {
 export interface SearchInput {
   industry: string;
   city: string;
+  country?: string | null; // ISO code; India when empty
   keywords?: string | null;
   staffRange?: string | null; // "11,200"
   limit?: number;
@@ -48,4 +50,5 @@ export const INDUSTRIES = [
   "Food processing",
 ];
 
+export { MARKETS } from "./markets";
 export const CITIES = ["Chennai", "Coimbatore", "Tiruppur", "Madurai", "Tiruchirappalli", "Salem", "Erode", "Hosur", "Vellore", "Tirunelveli"];

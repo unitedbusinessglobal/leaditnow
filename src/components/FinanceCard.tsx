@@ -2,18 +2,19 @@ import Link from "next/link";
 import type { Account } from "@prisma/client";
 import { day } from "@/lib/format";
 import { inrShort, type Estimate } from "@/domain/estimate";
-import { APOLLO_MISSING } from "@/domain/enrich";
+import { ENRICH_MISSING, revenueSourceLabel } from "@/domain/enrich";
 import { updateFinance, enrichOne } from "@/app/(app)/accounts/actions";
 import { SubmitButton } from "./SubmitButton";
 
 const quoteUrl = (sym: string, ex: string | null) =>
   `https://www.google.com/finance/quote/${encodeURIComponent(sym)}:${encodeURIComponent(ex && /BSE|BOM/i.test(ex) ? "BOM" : "NSE")}`;
 
-export function FinanceCard({ a, estimate, edit, canEnrich, apollo, canSettings }: {
-  a: Account; estimate: Estimate | null; edit: boolean; canEnrich: boolean; apollo: boolean; canSettings: boolean;
+export function FinanceCard({ a, estimate, edit, canEnrich, sources, canSettings }: {
+  a: Account; estimate: Estimate | null; edit: boolean; canEnrich: boolean; sources: string[]; canSettings: boolean;
 }) {
+  const connected = sources.length > 0;
   const rows: [string, React.ReactNode][] = [
-    ["Revenue", a.revenueInr ? <>{inrShort(a.revenueInr)} a year <span className="faint">({a.revenueSource === "apollo" ? "Apollo estimate" : a.revenueSource === "manual" ? "entered" : a.revenueSource})</span></> : null],
+    ["Revenue", a.revenueInr ? <>{inrShort(a.revenueInr)} a year <span className="faint">({revenueSourceLabel(a.revenueSource)})</span></> : null],
     ["Staff", a.staffSize ? `${a.staffSize.toLocaleString("en-IN")}` : null],
     ["Listed", a.listed == null ? null : a.listed ? (
       <>Yes{a.stockSymbol && <> · <a href={quoteUrl(a.stockSymbol, a.stockExchange)} target="_blank" rel="noreferrer">{a.stockSymbol}{a.stockExchange ? ` (${a.stockExchange})` : ""} — market cap ↗</a></>}</>
@@ -26,11 +27,12 @@ export function FinanceCard({ a, estimate, edit, canEnrich, apollo, canSettings 
     <section className="card stack">
       <div className="row" style={{ justifyContent: "space-between" }}>
         <h2 style={{ margin: 0 }}>Size and finance</h2>
-        {canEnrich && apollo && (
-          <form action={enrichOne}><input type="hidden" name="id" value={a.id} /><SubmitButton className="btn btn-sm" pending="Asking Apollo…">{a.enrichedAt ? "Refresh from Apollo" : "Enrich from Apollo"}</SubmitButton></form>
+        {canEnrich && connected && (
+          <form action={enrichOne}><input type="hidden" name="id" value={a.id} /><SubmitButton className="btn btn-sm" pending="Looking it up…">{a.enrichedAt ? "Refresh details" : "Fetch size and revenue"}</SubmitButton></form>
         )}
       </div>
-      {canEnrich && !apollo && <p className="notice" style={{ margin: 0 }}>{APOLLO_MISSING}</p>}
+      {canEnrich && connected && !a.enrichedAt && <p className="faint" style={{ margin: 0 }}>Tries {sources.join(", then ")}, stopping once staff, revenue and industry are found.</p>}
+      {canEnrich && !connected && <p className="notice" style={{ margin: 0 }}>{ENRICH_MISSING}{canSettings && <> <Link href="/settings/sources">Data sources</Link></>}</p>}
 
       <div>
         <div className="faint" style={{ marginBottom: 4 }}>Estimated IT budget</div>
@@ -52,9 +54,9 @@ export function FinanceCard({ a, estimate, edit, canEnrich, apollo, canSettings 
         </tbody>
       </table>
       {a.technologies.length > 0 && (
-        <div><div className="faint" style={{ marginBottom: 4 }}>Technologies (Apollo)</div><div className="row" style={{ gap: 4 }}>{a.technologies.slice(0, 20).map((t) => <span key={t} className="badge grey">{t}</span>)}</div></div>
+        <div><div className="faint" style={{ marginBottom: 4 }}>Technologies</div><div className="row" style={{ gap: 4 }}>{a.technologies.slice(0, 20).map((t) => <span key={t} className="badge grey">{t}</span>)}</div></div>
       )}
-      {a.enrichedAt && <p className="faint" style={{ margin: 0 }}>Apollo checked {day(a.enrichedAt)}.</p>}
+      {a.enrichedAt && <p className="faint" style={{ margin: 0 }}>Data sources checked {day(a.enrichedAt)}.</p>}
 
       {edit && (
         <details>

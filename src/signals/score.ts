@@ -1,3 +1,4 @@
+import { TARGET_CITIES } from "@/discovery/markets";
 import type { SignalMatch } from "./rules";
 
 export type NeedLabel = "High" | "Medium" | "Low" | "None";
@@ -45,7 +46,6 @@ export interface FitInput {
   referral?: boolean;
 }
 
-const TARGET_CITIES = ["chennai", "coimbatore", "tirupur", "tiruppur", "madurai"];
 const TARGET_INDUSTRIES = [
   "manufactur",
   "distribut",

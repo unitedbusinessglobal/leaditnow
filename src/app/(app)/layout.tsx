@@ -35,6 +35,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
             <div className="sep" />
             <Link href="/settings/users">Team</Link>
             <Link href="/settings/estimates">Estimates</Link>
+            <Link href="/settings/sources">Data sources</Link>
           </>
         )}
         <div className="me">

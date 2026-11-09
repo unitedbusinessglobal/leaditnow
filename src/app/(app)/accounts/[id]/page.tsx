@@ -16,8 +16,12 @@ import { FinanceCard } from "@/components/FinanceCard";
 import { AssignControls } from "@/components/AssignControls";
 import { actorFor, assignOptions, loadTeams, canGiveTask } from "@/domain/assign";
 import { addTask } from "../../work/actions";
+import { findEmailsOne } from "../actions";
 import { estimateItBudget, readSettings } from "@/domain/estimate";
-import { apolloReady } from "@/domain/enrich";
+import { emailsReady } from "@/domain/enrich";
+import { SubmitButton } from "@/components/SubmitButton";
+import { MARKETS } from "@/discovery/markets";
+import { readyProviders } from "@/enrich/providers";
 import { addContactFromPoint, updateAccount, rescan, addSignal, removeSignal, addContact, optOutContact, createDeal } from "../actions";
 
 const ruleLabel = (id: string) => RULES.find((r) => r.id === id)?.label ?? id;
@@ -152,7 +156,7 @@ export default async function AccountPage({ params, searchParams }: {
             )}
           </section>
 
-          <FinanceCard a={a} estimate={estimate} edit={edit} canEnrich={can(user.role, "leads.find")} apollo={apolloReady()} canSettings={can(user.role, "users.manage")} />
+          <FinanceCard a={a} estimate={estimate} edit={edit} canEnrich={can(user.role, "leads.find")} sources={readyProviders().filter((p) => p.company).map((p) => p.label)} canSettings={can(user.role, "users.manage")} />
 
           <section className="card">
             <div className="row" style={{ justifyContent: "space-between" }}><h2>Deals</h2></div>
@@ -322,7 +326,12 @@ export default async function AccountPage({ params, searchParams }: {
           </section>
 
           <section className="card">
-            <h2>Published contact details</h2>
+            <div className="row" style={{ justifyContent: "space-between" }}>
+              <h2 style={{ margin: 0 }}>Contact details found</h2>
+              {can(user.role, "leads.find") && emailsReady() && (
+                <form action={findEmailsOne}><input type="hidden" name="id" value={a.id} /><SubmitButton className="btn btn-sm" pending="Searching…">Find emails</SubmitButton></form>
+              )}
+            </div>
             {a.contactPoints.length === 0 ? (
               <p className="faint">None found on {a.domain}{a.lastScannedAt ? "" : " yet: the website has not been scanned"}.</p>
             ) : (
@@ -331,7 +340,10 @@ export default async function AccountPage({ params, searchParams }: {
                   <li key={p.id} className="row" style={{ justifyContent: "space-between", gap: 6 }}>
                     <span>
                       {p.kind === "email" ? <a href={`mailto:${p.value}`}>{p.value}</a> : <a href={`tel:${p.value.replace(/\s/g, "")}`}>{p.value}</a>}
-                      <div className="faint"><a href={p.sourceUrl} target="_blank" rel="noreferrer">{p.sourceUrl.replace(/^https?:\/\//, "")}</a></div>
+                      {p.name && <div><strong>{p.name}</strong>{p.title && <span className="muted"> · {p.title}</span>}</div>}
+                      <div className="faint">
+                        {p.source === "website" ? <a href={p.sourceUrl} target="_blank" rel="noreferrer">{p.sourceUrl.replace(/^https?:\/\//, "")}</a> : <>From {p.sourceUrl}{p.confidence != null && ` · ${p.confidence}% confidence`}</>}
+                      </div>
                     </span>
                     {edit && !knownValues.has(p.value) && (
                       <form action={addContactFromPoint}>
@@ -343,7 +355,7 @@ export default async function AccountPage({ params, searchParams }: {
                 ))}
               </ul>
             )}
-            <p className="faint" style={{ marginBottom: 0 }}>Emails and phone numbers the company publishes on its own website, found during the scan.</p>
+            <p className="faint" style={{ marginBottom: 0 }}>Emails and phone numbers published on the company&apos;s website (found when it is scanned){emailsReady() ? ", and work emails found by the connected email sources" : ""}.</p>
           </section>
 
           <section className="card">
@@ -352,6 +364,11 @@ export default async function AccountPage({ params, searchParams }: {
               <input type="hidden" name="id" value={a.id} />
               <label>Name<input name="name" defaultValue={a.name} disabled={!edit} /></label>
               <label>City<input name="city" defaultValue={a.city ?? ""} disabled={!edit} /></label>
+              <label>Country
+                <select name="country" defaultValue={a.country ?? "IN"} disabled={!edit}>
+                  {MARKETS.map((m) => <option key={m.code} value={m.code}>{m.name}</option>)}
+                </select>
+              </label>
               <label>Industry<input name="industry" defaultValue={a.industry ?? ""} disabled={!edit} /></label>
               <label>Staff (approx.)<input name="staffSize" defaultValue={a.staffSize ?? ""} inputMode="numeric" disabled={!edit} /></label>
               <label>Office phone<input name="phone" defaultValue={a.phone ?? ""} disabled={!edit} /></label>

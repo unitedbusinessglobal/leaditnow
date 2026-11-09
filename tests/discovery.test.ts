@@ -78,7 +78,8 @@ describe("lead source connectors", () => {
 
   it("OpenStreetMap: builds a city and tag query and parses elements", () => {
     const q = overpassQuery({ industry: "Healthcare and clinics", city: "Madurai" });
-    expect(q).toContain('area["name"="Madurai"]["boundary"="administrative"]->.city');
+    expect(q).toContain('area["ISO3166-1"="IN"][admin_level=2]->.country');
+    expect(q).toContain('[~"^name(:en)?$"~"^Madurai$",i](area.country);\nmap_to_area->.city;');
     expect(q).toContain('["amenity"~"hospital|clinic|doctors|dentist|pharmacy"]["website"]');
     const found = parseOverpass({
       elements: [
@@ -113,7 +114,7 @@ describe("lead source connectors", () => {
       { item: { value: "http://www.wikidata.org/entity/Q726193" }, itemLabel: { value: "Ashok Leyland" }, website: { value: "https://ashokleyland.com" }, employees: { value: "11906" }, industryLabel: { value: "automotive industry" } },
       { item: { value: "http://www.wikidata.org/entity/Q1255973" }, itemLabel: { value: "Dravida Munnetra Kazhagam" }, website: { value: "https://www.dmk.in/" } },
     ] } }, { industry: "Manufacturing", city: "Chennai" });
-    expect(auto).toEqual([{ source: "wikidata", externalId: "Q726193", name: "Ashok Leyland", website: "https://ashokleyland.com", city: "Chennai", industry: "automotive industry", staffSize: 11906 }]);
+    expect(auto).toEqual([{ source: "wikidata", externalId: "Q726193", name: "Ashok Leyland", website: "https://ashokleyland.com", city: "Chennai", country: "IN", industry: "automotive industry", staffSize: 11906 }]);
   });
 });
 
