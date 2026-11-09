@@ -53,12 +53,20 @@ export function parseOverpass(json: { elements?: Element[] }, i: SearchInput): F
   return out;
 }
 
+const OVERPASS = ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter"];
+
+/** Overpass is busy at times (429/502/504): try the main server, then a mirror. */
 export async function searchOsm(i: SearchInput, f: Fetch = fetch): Promise<Found[]> {
-  const res = await f("https://overpass-api.de/api/interpreter", {
-    method: "POST",
-    headers: { "content-type": "application/x-www-form-urlencoded", "user-agent": UA },
-    body: `data=${encodeURIComponent(overpassQuery(i))}`,
-  });
-  if (!res.ok) throw new Error(`OpenStreetMap (Overpass): HTTP ${res.status}`);
-  return parseOverpass(await res.json(), i);
+  let last = 0;
+  for (const url of OVERPASS) {
+    const res = await f(url, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded", "user-agent": UA },
+      body: `data=${encodeURIComponent(overpassQuery(i))}`,
+    });
+    if (res.ok) return parseOverpass(await res.json(), i);
+    last = res.status;
+    if (![429, 502, 503, 504].includes(res.status)) break;
+  }
+  throw new Error(`OpenStreetMap (Overpass): ${[429, 502, 503, 504].includes(last) ? "the map servers are busy, try again in a minute" : `HTTP ${last}`}`);
 }
