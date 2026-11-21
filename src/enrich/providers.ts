@@ -57,7 +57,8 @@ export function moneyRange(s: string | null | undefined): number | null {
 export function staffRange(s: string | number | null | undefined): number | null {
   if (s == null) return null;
   if (typeof s === "number") return s;
-  const nums = [...s.replace(/,/g, "").matchAll(/\d+/g)].map((m) => Number(m[0]));
+  // "1K-5K" and "10K+" use thousands.
+  const nums = [...s.replace(/,/g, "").matchAll(/(\d+(?:\.\d+)?)\s*([km])?/gi)].map((m) => Number(m[1]) * (m[2] ? MULT[m[2].toLowerCase()] : 1));
   if (nums.length === 0) return null;
   return nums.length === 1 ? nums[0] : Math.round((nums[0] + nums[1]) / 2);
 }
@@ -78,6 +79,15 @@ async function getJson(f: Fetch, url: string, init: RequestInit, label: string, 
 
 // ---------- People Data Labs ----------
 
+/** "ASHOKLEY.NS" -> symbol ASHOKLEY on NSE (exchange codes as Google Finance uses them). */
+const SUFFIX: Record<string, string> = { NS: "NSE", BO: "BOM", L: "LON", SI: "SGX", KL: "KLSE", SR: "TADAWUL", AD: "ADX", DU: "DFM", QA: "QSE", TO: "TSE", V: "CVE", AX: "ASX", NZ: "NZE", JO: "JSE", IR: "ISE" };
+export function ticker(t: string | null | undefined): { symbol: string | null; exchange: string | null } {
+  if (!t) return { symbol: null, exchange: null };
+  const m = t.match(/^([A-Z0-9&-]+)\.([A-Z]{1,2})$/i);
+  if (m && SUFFIX[m[2].toUpperCase()]) return { symbol: m[1].toUpperCase(), exchange: SUFFIX[m[2].toUpperCase()] };
+  return { symbol: t.toUpperCase(), exchange: null };
+}
+
 export function parsePdl(c: Record<string, unknown>): CompanyFacts {
   const loc = (c.location ?? {}) as { locality?: string };
   return {
@@ -87,7 +97,7 @@ export function parsePdl(c: Record<string, unknown>): CompanyFacts {
     revenueText: (c.inferred_revenue as string) ?? null,
     industry: titleCase(c.industry as string),
     foundedYear: year(c.founded),
-    symbol: (c.ticker as string) ?? null,
+    ...ticker(c.ticker as string | undefined),
     listed: c.type === "public" ? true : c.type ? false : null,
     city: titleCase(loc.locality),
     linkedin: (c.linkedin_url as string) ?? null,
@@ -116,16 +126,19 @@ export function parseHunterCompany(d: Record<string, unknown>): CompanyFacts {
   };
 }
 
+const PLACEHOLDER = /^(jane[._-]?doe|john[._-]?doe|jdoe|flast|firstlast|first[._-]?last|firstname([._-]?lastname)?|f[._-]?last|example|test|email|name)$/i;
+
 export function parseHunterEmails(d: Record<string, unknown>): FoundEmail[] {
   return ((d.emails ?? []) as { value: string; type?: string; first_name?: string; last_name?: string; position?: string; phone_number?: string; confidence?: number }[])
-    .filter((e) => e.value)
+    // Hunter sometimes lists address patterns or placeholders (flast@, jane_doe@) rather than real people.
+    .filter((e) => e.value && !PLACEHOLDER.test(e.value.split("@")[0]))
     .map((e) => ({
       email: e.value.toLowerCase(),
       name: [e.first_name, e.last_name].filter(Boolean).join(" ") || null,
       title: e.position ?? null,
       phone: e.phone_number ?? null,
       confidence: e.confidence ?? null,
-      generic: e.type === "generic",
+      generic: e.type === "generic" || (!e.first_name && !e.last_name),
     }));
 }
 
@@ -228,7 +241,7 @@ export function parseLusha(d: Record<string, unknown>): CompanyFacts {
 export const PROVIDERS: Provider[] = [
   {
     id: "pdl", label: "People Data Labs", env: ["PDL_API_KEY"],
-    free: "100 company lookups a month", paid: "from $99 a month",
+    free: "100 company lookups a month (no revenue estimate on the free plan)", paid: "from $99 a month",
     signup: "https://dashboard.peopledatalabs.com/signup", gives: "Staff, revenue range, industry, founded year, listed or private, ticker, LinkedIn",
     company: async (domain, f) => {
       const c = await getJson(f, `https://api.peopledatalabs.com/v5/company/enrich?website=${encodeURIComponent(domain)}&min_likelihood=4`,

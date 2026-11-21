@@ -9,7 +9,7 @@ import { wikidataQuery } from "@/discovery/wikidata";
 import { normalisePhone } from "@/domain/accounts";
 import { extractContacts } from "@/signals/contacts";
 import { fitScore } from "@/signals/score";
-import { moneyRange, staffRange, parsePdl, parseHunterCompany, parseHunterEmails, parseProspeo, parseLusha, parseSnovCompany } from "@/enrich/providers";
+import { moneyRange, staffRange, ticker, parsePdl, parseHunterCompany, parseHunterEmails, parseProspeo, parseLusha, parseSnovCompany } from "@/enrich/providers";
 import { enrichAccount, findEmails, mergeFacts, revenueSourceLabel } from "@/domain/enrich";
 import { blankFacts } from "@/enrich/providers";
 import { upsertAccount } from "@/domain/accounts";
@@ -58,6 +58,10 @@ describe("provider parsing", () => {
     expect(staffRange("11-50")).toBe(31);
     expect(staffRange("201 - 500")).toBe(351);
     expect(staffRange("10001+")).toBe(10001);
+    expect(staffRange("1K-5K")).toBe(3000);
+    expect(ticker("ASHOKLEY.NS")).toEqual({ symbol: "ASHOKLEY", exchange: "NSE" });
+    expect(ticker("ACME")).toEqual({ symbol: "ACME", exchange: null });
+    expect(staffRange("10K+")).toBe(10000);
   });
   it("maps each provider's company record", () => {
     const pdl = parsePdl({ id: "p1", employee_count: 120, size: "51-200", inferred_revenue: "$10M-$25M", industry: "machinery", founded: 1998, type: "public", ticker: "ACME", location: { locality: "dubai" } });
@@ -71,7 +75,7 @@ describe("provider parsing", () => {
     expect(parseSnovCompany({ data: { company_name: "Acme", size: "51-200", industry: "IT", founded: "2005", hq_phone: "+1 412 555 0100" } })).toMatchObject({ employees: 126, foundedYear: 2005 });
   });
   it("maps Hunter's emails", () => {
-    const e = parseHunterEmails({ emails: [{ value: "Ravi@Acme.ae", type: "personal", first_name: "Ravi", last_name: "K", position: "CTO", confidence: 92 }, { value: "info@acme.ae", type: "generic" }] });
+    const e = parseHunterEmails({ emails: [{ value: "Ravi@Acme.ae", type: "personal", first_name: "Ravi", last_name: "K", position: "CTO", confidence: 92 }, { value: "info@acme.ae", type: "generic" }, { value: "flast@acme.ae" }, { value: "jane_doe@acme.ae", first_name: "Jane", last_name: "Doe" }] });
     expect(e).toEqual([
       { email: "ravi@acme.ae", name: "Ravi K", title: "CTO", phone: null, confidence: 92, generic: false },
       { email: "info@acme.ae", name: null, title: null, phone: null, confidence: null, generic: true },
